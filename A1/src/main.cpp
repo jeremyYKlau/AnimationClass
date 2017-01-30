@@ -223,29 +223,19 @@ std::vector<Vec3f> curavture(float s)
 	//return (position(s+DS) - position(s) + position(s-DS)) / (DS*DS);
 }
 
-float wrap (float s)
-{
-	if (s>L) 
-	{
-		s-= L;
-	}
-	else if (s<0)
-	{
-		s+=L;
-	}
-	return s;
-}
-
 //code below none of it works but basic equations given in class
 void subDivision(std::vector<Vec3f> points)
 {
-	subPoints.push_back(points[1] - points[2]);
-	curvePoints.push_back(points[1] + subPoints[1]);
-	/*
-	for (unsigned i=1; i < points.size(); i++)
-		{
-			subPoints.push_back(subPoints[i] = points[i-1] - points[i]);
-		}*/
+	subPoints[1] = subPoints.push_back(points[1] - points[2]);
+	int numPoints = sizeof(points);
+	for (unsigned i=0; i < points.size(); i++)
+	{
+		subPoints.push_back(subPoints[i] = points[i] + points[(i+1) & numPoints]);
+	}
+	for (unsigned j = 0; j < points.size(); i++)
+	{
+		curvePoints.push_back((points[i] + subPoints[i]) / 2);
+	}
 }
 
 void setupVAO() {
