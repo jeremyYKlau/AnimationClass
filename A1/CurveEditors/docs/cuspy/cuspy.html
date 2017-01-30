@@ -1,0 +1,179 @@
+<!doctype html public "-//w3c//dtd html 4.0 transitional//en">
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+ <meta name="AppleTitle" content="Cuspy Help">
+<meta name="AppleIcon" content="">
+    <title>Contour Editor</title>
+
+    <!-- Links to external style sheets -->
+    <link REL="stylesheet" HREF="vlab.css" TITLE="Page Layout">
+  </head>
+
+  <body>
+    <h1>Contour Editor Utility</h1>
+
+    <h5>Quick contents</h5>
+    <ul>
+      <li><a href="#OVER">Overview</a></li>
+      <li><a href="#CUSPY">Cuspy</a></li>
+      <li><a href="#CONFIG">Configuration</a></li>
+      <li><a href="#FORMAT">File Format</a></li>
+      <li><a href="#KNOWNISSUES">Known Issues</a></li>
+      <li><a href="#CREDITS">Credits</a></li>
+    </ul>
+
+    <h2><a name="OVER"></a>Overview</h2>
+    <p><tt>Cuspy</tt> is a utility for editing spline contours in 2D space.  A B-Spline is
+      used to determine the curve.  The curve may be either an open or closed one.
+    </p>
+
+    <h2><a name="CUSPY"></a>Cuspy</h2>
+    <p>The program is invoked as:</p>
+    <p><tt>cuspy (filename)</tt></p>
+    <p>A window is displayed as in <a href="#FIGURE1">Figure 1</a>, showing
+      the contour, its control points.  If the filename arguemnt specifies a
+      a valid contour file, the file will be loaded.  Otherwise, a default contour of
+      four control points forming a closed circle about the origin.
+    </p>
+
+    <blockquote>
+      <center><img src="cuspy.png" alt="A cuspy screen"></center>
+    </blockquote>
+    <center><h4><a name="FIGURE1"></a>Figure 1 - A cuspy screen</h4></center>
+
+    <h3>Manipulating the contour</h3>
+    <ul>
+      <li><b>Moving control points</b> - The shape of the contour is manipulated by moving
+	control points about by dragging them with the left mouse button.
+      </li>
+      <li><b>Adding control points</b> - Control points can be added by clicking the middle
+	mouse button at the desired placement location.  Clicking the left and right buttons
+	together can also be used.
+      </li>
+      <li><b>Deleting control points</b> - A control point can be deleted by clicking on it
+	with the middle mouse button.  Clicking the left and right buttons together can also
+	be used.  Neither the first nor last control point of the contour can be deleted.
+	Also, the contour si constrained to have a minimum of four control points at any given
+	time.
+      </li>
+      <li><b>Altering Multiplicity</b> - The multiplicity of a control point can be increased
+	by double clicking on it.  A point may have a maximum multiplicity of three, so double
+	clicking a point with multiplicity of three will reset it to multiplicity of one.  The
+	colour of a control point will change to reflect the multiplicity change.
+    </ul>
+
+    <h3>Manipulating the View</h3>
+    <ul>
+      <li><b>Zooming</b> - Zooming the view is done by dragging the view with the left mouse
+	button while holding either the Alt or Ctrl button.
+      </li>
+      <li><b>Panning</b> - Panning the view is done by dragging the view with the left mouse
+	button while holding the Shift button.
+      </li>
+    </ul>
+
+    <h3>The popup menu</h3>
+    <p>The <tt>cuspy</tt> popup menu is controlled using the right mouse button.
+      The menu contains the following items:</p>
+    <ul>
+            <li><b>Save</b> - Save the contour to file specified when the program was invioked. 
+	If there was no filename specified, the user will be prompt for one.
+      <li><b>Save as ...</b> - Prompts the user for a filename and saves the funtion to that
+	file.
+		<li><b>Revert to saved</b> - This will reload the contour from file.  Any changes since the last save will be lost when this is done.
+
+      <li><b>Closed</b> - Flags whether the contour should be open or closed.
+      <li><b>View points</b> - Toggles whether the control points are visible.  This is
+	on by default.
+      <li><b>View segments</b> - Toggles whether the line segments connecting control points
+	are visible.  This is off by default.
+      <li><b>View curve</b> - Toggles whether the contour curve visible.  This is
+	on by default.
+      <li><b>View axes</b> - Toggles whether the spatial axes are visible.
+	This is	on by default.
+      <li><b>Quick help</b> - Opens the Help dialog.  A short in program reference that a lists the program's mouse commands. 
+      <li><b>About</b> - Information about implementation and documentation author, Colin Smith. 
+      <li><b>Edit name ...</b> - Edits the name of the contour to be saved within the contour file (.con). 
+			
+      <li><b>Refresh mode</b> - Sets the <i>mode</i> for which edits within <tt>cuspy</tt> are propagated back to the file that was read.
+	  <ul>
+		<li><b>Explicit</b> - Changes are only saved back to the file when explicitly saved (i.e. using the <i>Save/Save as ..</i> popup menu features).
+		<li><b>Triggered</b> - Changes are propagated back to the file when a mouse release event is detected (i.e. after releasing the left mouse button).
+		<li><b>Continuous</b> - Changes are propagated back to the file as control points are being manipulated. This works best with the accompanying text editor <b>vlabTextEditor</b>.
+	  </ul>
+      <li><b>Exit</b> - Exits the utility.  If there was any changes since the last save, the
+	user will be prompted to save.
+    </ul>
+
+    <h3>Using with the <b>vlabTextEditor</b></h3>
+	<p>
+		<tt>cuspy</tt> works well with the accompanying text editor <b>vlabTextEditor</b>. When <tt>cuspy</tt> is in continuous mode, and the <b>vlabTextEditor</b> is concurrently open with the same contour file (.con), the text values within the <b>vlabTextEditor</b> changes as control points are moved within <tt>cuspy</tt>. Many other text editors may need to be refreshed before the changes are visible. 
+	</p>
+
+    <h2><a name="CONFIG"></a>Configuration</h2>
+    <p>The colours used in cuspy can be configured be editing the configuration file in VLAB.
+      The configuration file is shared with that of the function editor, <tt>funcedit</tt>.
+      In the VLAB conguration directory (VLABCONFIGDIR), there is a file called 'funcedit' that
+      may contain a line entry for each configurable colour.  Each entry needs three values for
+      red, green and blue colour components, scaled from 0.0 to 1.0.
+    </p>
+    <h3>Allowed configuration entries</h3>
+    <ul>
+      <li>background</li>
+      <li>points</li>
+      <li>segments</li>
+      <li>curve</li>
+      <li>grid</li>
+      <li>xaxis</li>
+      <li>yaxis</li>
+      <li>labels</li>
+    </ul>
+    <p>An example entry would then be <tt>background: 0.0 0.0 0.0</tt> which would give a black
+      background.
+    </p>
+
+    <h2><a name="FORMAT"></a>Contour File Format</h2>
+    <p>The contour file format consists of:
+		<ul>
+		<li><b>cver</b> <i># #</i> - Cuspy and contour version numbers.
+		<li><b>name:</b> <i>name</i> - Internal name of contour file. 
+		<li><b>points:</b> <i># #</i> - Number of unique control points, followed by total number of points with multiplicity. 
+		<li><b>type:</b> <i>type</i> - Closed or open curve. 
+		<li><i>x y z m</i> - Control point entery, <i>x</i>-position, <i>y</i>-position, <i>z</i>-position and <i>m</i> multiplicity of control point.
+		</ul>
+    </p>
+    <p>Example contour file:</p>
+    <pre>
+	cver 1 1
+	name: curve_name
+	points: 5 6
+	type: closed
+	0.40 0.40 0.0 2
+	0.54 0.02 0.0 1
+	0.40 -0.40 0.0 1
+	-0.40 -0.40 0.0 1
+	-0.40 0.40 0.0 1
+    </pre>
+
+    <h2><a name="KNOWNISSUES"></a>Known Issues</h2>
+    <p><tt>cuspy</tt> has several known issues that are currently being addressed:
+	<ul>
+		<li>The <i>z</i>-positions of the curve (as read in from the .con contour file) <b>are</b> considered in the calculation of picking control points. Meaning, if <i>z</i>-positions are on vastly different levels, the picking of control points may not work as desired.
+		<li>The quick keys (e.g. Ctrl+S) are inaffective.
+	</ul>
+	</p>
+
+    <h2><a name="CREDITS"></a>Credits</h2>
+    <p>Colin Smith - <tt>cuspy</tt> - implementation and documentation</p>
+    <p>Andrew Owens - <tt>cuspy</tt> - documentation</p>
+
+    <br>
+    <hr>
+    <address>
+      <font size=-2>
+	Last updated January 27, 2017 by Andrew Owens</a>
+      </font>
+    </address>
+  </body>
+</html>
