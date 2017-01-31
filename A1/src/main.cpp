@@ -154,7 +154,7 @@ void displayFunc() {
   glBindVertexArray(line_vaoID);
   // Draw lines 
   //how can i get the amount of points in the vector of points here because sizeof(points) doesn't get right value
-  glDrawArrays(GL_LINE_STRIP, 0, 5 /*sizeof(points)*/);
+  glDrawArrays(GL_LINE_STRIP, 0, sizeof(curvePoints));
   
 }
 
@@ -191,17 +191,17 @@ void loadLineGeometryToGPU() {
 	// draws lines from these points
 	std::vector<Vec3f> points;
 	
-	points.push_back(Vec3f(0,5,0));
-	points.push_back(Vec3f(-5, 2, 2));
-	points.push_back(Vec3f(0, 0, 0));
-	points.push_back(Vec3f(5,-2,-2));
-	points.push_back(Vec3f(0,5,0));
+	points.push_back(Vec3f(10,0,0));
+	points.push_back(Vec3f(10, 5, 0));
+	points.push_back(Vec3f(-10, 5, 0));
+	points.push_back(Vec3f(-10, 0,0));
+	points.push_back(Vec3f(10,0,0));
 	subDivision(points);
 
 	glBindBuffer(GL_ARRAY_BUFFER, line_vertBufferID);
 	glBufferData(GL_ARRAY_BUFFER,
-               sizeof(Vec3f) * sizeof(points), // byte size of Vec3f, Change to fit amount of points rendered each time
-               points.data(),      // pointer (Vec3f*) to contents of verts
+               sizeof(Vec3f) * (sizeof(points)*2), // byte size of Vec3f, Change to fit amount of points rendered each time
+               curvePoints.data(),      // pointer (Vec3f*) to contents of verts
                GL_STATIC_DRAW);   // Usage pattern of GPU buffer
 }
 
@@ -223,29 +223,19 @@ std::vector<Vec3f> curavture(float s)
 	//return (position(s+DS) - position(s) + position(s-DS)) / (DS*DS);
 }
 
-float wrap (float s)
-{
-	if (s>L) 
-	{
-		s-= L;
-	}
-	else if (s<0)
-	{
-		s+=L;
-	}
-	return s;
-}
-
 //code below none of it works but basic equations given in class
 void subDivision(std::vector<Vec3f> points)
 {
-	subPoints.push_back(points[1] - points[2]);
-	curvePoints.push_back(points[1] + subPoints[1]);
-	/*
-	for (unsigned i=1; i < points.size(); i++)
-		{
-			subPoints.push_back(subPoints[i] = points[i-1] - points[i]);
-		}*/
+	int numPoints = sizeof(points);
+	for (unsigned i=0; i < points.size(); i++)
+	{
+		subPoints.push_back(points[i]);
+		subPoints.push_back((points[i] + points[(i+1) % sizeof(points)]) / 2);
+	}
+	for (unsigned j = 0; j < subPoints.size(); j++)
+	{
+		curvePoints.push_back((subPoints[j] + subPoints[(j+1) % (numPoints*2)]) / 2);
+	}
 }
 
 void setupVAO() {
