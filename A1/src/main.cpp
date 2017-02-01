@@ -60,12 +60,6 @@ Mat4f P;
 // Only one thing is rendered at a time, so only need one MVP
 // When drawing different objects, update M and MVP = M * V * P
 Mat4f MVP;
-float lX1 = 10;
-float lX2 = -10;
-float lY1 = 0;
-float lY2 = 0;
-float lZ1 = 0;
-float lZ2 = 0;
 
 // Camera and veiwing Stuff
 Camera camera;
@@ -120,10 +114,13 @@ void reloadColorUniform(float r, float g, float b);
 std::string GL_ERROR();
 int main(int, char **);
 
-int L; //length of line
-float DS = 0.2;
+std::vector<Vec3f> position(float s);
+
+float L; //length of line
+float DS = 0.4; //defined change in s that is used to traverse the piece wise curve
+float dT;
+std::vector<Vec3f> objectPos;
 std::vector<Vec3f> gravity;
-std::vector<Vec3f> subPoints;
 std::vector<Vec3f> curvePoints;
 //==================== FUNCTION DEFINITIONS ====================//
 
@@ -153,31 +150,35 @@ void displayFunc() {
   // and attribute config of buffers
   glBindVertexArray(line_vaoID);
   // Draw lines 
-  //how can i get the amount of points in the vector of points here because sizeof(points) doesn't get right value
-  glDrawArrays(GL_LINE_STRIP, 0, sizeof(curvePoints));
+  glDrawArrays(GL_LINE_LOOP, 0, curvePoints.size());
   
 }
 
+void startingPoint()
+{
+	M = TranslateMatrix(curvePoints[20].x(), curvePoints[20].y(), curvePoints[20].z());
+	setupModelViewProjectionTransform();
+	reloadMVPUniform();
+}
 void animateQuad(float t) {
-  M = RotateAboutYMatrix(100 * t);
+	M = RotateAboutYMatrix(100 * t);
 
-  float s = (std::sin(t) + 1.f) / 2.f;
-  float x = (1 - s) * (10) + s * (-10);
-
-  M = TranslateMatrix(x, 0, 0) * M;
-
-  setupModelViewProjectionTransform();
-  reloadMVPUniform();
+	//float s = (std::sin(t) + 1.f) / 2.f;
+	//float x = (1 - s) * (10) + s * (-10);
+	//this matrix does all the translations pass this on based off the movement of the position
+	M = TranslateMatrix(curvePoints[0].x(), curvePoints[0].y(), curvePoints[0].z()) * M;
+	setupModelViewProjectionTransform();
+	reloadMVPUniform();
 }
 
 void loadQuadGeometryToGPU() {
 	// Just basic layout of floats, for a quad
 	// 3 floats per vertex, 4 vertices
 	std::vector<Vec3f> verts;
-	verts.push_back(Vec3f(-1, -1, 0));
-	verts.push_back(Vec3f(-1, 1, 0));
-	verts.push_back(Vec3f(1, -1, 0));
-	verts.push_back(Vec3f(1, 1, 0));
+	verts.push_back(Vec3f(-0.5, -0.5, 0));
+	verts.push_back(Vec3f(-0.5, 0.5, 0));
+	verts.push_back(Vec3f(0.5, -0.5, 0));
+	verts.push_back(Vec3f(0.5, 0.5, 0));
 
 	glBindBuffer(GL_ARRAY_BUFFER, vertBufferID);
 	glBufferData(GL_ARRAY_BUFFER,
@@ -188,19 +189,27 @@ void loadQuadGeometryToGPU() {
 
 void loadLineGeometryToGPU() {
 	// Draws the line
-	// draws lines from these points
+	// draws lines from the following points
+
 	std::vector<Vec3f> points;
 	
-	points.push_back(Vec3f(10,0,0));
-	points.push_back(Vec3f(10, 5, 0));
-	points.push_back(Vec3f(-10, 5, 0));
-	points.push_back(Vec3f(-10, 0,0));
-	points.push_back(Vec3f(10,0,0));
+	points.push_back(Vec3f(-10,0,0));
+	points.push_back(Vec3f(0,5,0));
+	points.push_back(Vec3f(6,3,2));
+	points.push_back(Vec3f(2,-2,4));
+	points.push_back(Vec3f(0,3,4));
+	points.push_back(Vec3f(-5,0,2));
+	
+	//subdivide line using chaikin method until smooth
+	//have to call it on intial points once due to my bad programming
 	subDivision(points);
-
+	for (unsigned i=0; i < 5; i++)
+	{
+		subDivision(curvePoints);
+	}
 	glBindBuffer(GL_ARRAY_BUFFER, line_vertBufferID);
 	glBufferData(GL_ARRAY_BUFFER,
-               sizeof(Vec3f) * (sizeof(points)*2), // byte size of Vec3f, Change to fit amount of points rendered each time
+               sizeof(Vec3f) * (sizeof(points)*16), // byte size of Vec3f, Change to fit amount of points rendered each time
                curvePoints.data(),      // pointer (Vec3f*) to contents of verts
                GL_STATIC_DRAW);   // Usage pattern of GPU buffer
 }
@@ -208,33 +217,48 @@ void loadLineGeometryToGPU() {
 std::vector<Vec3f> position(float s)
 {
 	std::vector<Vec3f> p;
+	p.push_back(Vec3f(curvePoints[s].x(), curvePoints[s].y(), curvePoints[s].z()));
+	//std::cout << p[0].x() << std::endl;
 	return p;
 }
 
-/*std::vector<Vec3f> tangent(float s)
+void motionAlongCurve(std::vector<Vec3f> objectPos, float bt, float DS, int i)
 {
-	return (position(s+DS) - position(s)) / DS;
-}*/
-
-std::vector<Vec3f> curavture(float s)
-{
-	std::vector<Vec3f> p0 = position(s+DS);
-	std::vector<Vec3f> p1 = position(s);
-	//return (position(s+DS) - position(s) + position(s-DS)) / (DS*DS);
+	int numPoints = curvePoints.size();
+	float x = (objectPos[(i+1) % numPoints].x() - objectPos[i].x());
+	float y = (objectPos[(i+1) % numPoints].y() - objectPos[i].y());
+	float z = (objectPos[(i+1) % numPoints].z() - objectPos[i].z());
+	float distance = sqrt((x*x) + (y*y) + (z*z));
+	if ((distance - bt) > DS)
+	{
+		bt =+ distance;
+	}
+	else 
+	{
+		float DSprime = distance - bt;
+		i = i+1;
+		while(DSprime + distance < DS)
+		{
+			DSprime = DSprime + distance;
+			i = i + 1;
+		}
+		//return ((DS - DSprime)*((objectPos[i] - objectPos[(i+1) % numPoints]) / distance)); 
+	}
 }
 
-//code below none of it works but basic equations given in class
 void subDivision(std::vector<Vec3f> points)
 {
-	int numPoints = sizeof(points);
+	std::vector<Vec3f> subPoints;
+	curvePoints.clear();
+	int numPoints = points.size();
 	for (unsigned i=0; i < points.size(); i++)
 	{
 		subPoints.push_back(points[i]);
-		subPoints.push_back((points[i] + points[(i+1) % sizeof(points)]) / 2);
+		subPoints.push_back((points[i] + (points[(i+1) % numPoints])) / 2);
 	}
-	for (unsigned j = 0; j < subPoints.size(); j++)
+	for (unsigned j=0; j < subPoints.size(); j++)
 	{
-		curvePoints.push_back((subPoints[j] + subPoints[(j+1) % (numPoints*2)]) / 2);
+		curvePoints.push_back((subPoints[j] + (subPoints[(j+1) % (numPoints*2)])) / 2);
 	}
 }
 
@@ -396,12 +420,12 @@ int main(int argc, char **argv) {
 
   init(); // our own initialize stuff func
 
-  float t = 0;
-  float dt = 0.01;
+  float t = 0; //initial time value
+  float dt = 0.05; //changes the time interval to speed up or slow down simulation
 
   while (glfwGetKey(window, GLFW_KEY_ESCAPE) != GLFW_PRESS &&
          !glfwWindowShouldClose(window)) {
-
+	startingPoint();
     if (g_play) {
       t += dt;
       animateQuad(t);
