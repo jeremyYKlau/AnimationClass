@@ -115,10 +115,12 @@ std::string GL_ERROR();
 int main(int, char **);
 
 std::vector<Vec3f> position(float s);
+void motionAlongCurve(std::vector<Vec3f> objectPos, float bt, float DS, int i);
 
 float L; //length of line
 float DS = 0.4; //defined change in s that is used to traverse the piece wise curve
 float dT;
+float bCurrent;
 std::vector<Vec3f> objectPos;
 std::vector<Vec3f> gravity;
 std::vector<Vec3f> curvePoints;
@@ -166,6 +168,7 @@ void animateQuad(float t) {
 	//float s = (std::sin(t) + 1.f) / 2.f;
 	//float x = (1 - s) * (10) + s * (-10);
 	//this matrix does all the translations pass this on based off the movement of the position
+
 	M = TranslateMatrix(curvePoints[0].x(), curvePoints[0].y(), curvePoints[0].z()) * M;
 	setupModelViewProjectionTransform();
 	reloadMVPUniform();
@@ -242,7 +245,7 @@ void motionAlongCurve(std::vector<Vec3f> objectPos, float bt, float DS, int i)
 			DSprime = DSprime + distance;
 			i = i + 1;
 		}
-		//return ((DS - DSprime)*((objectPos[i] - objectPos[(i+1) % numPoints]) / distance)); 
+		return ((DS - DSprime)*((objectPos[i] - objectPos[(i+1) % numPoints]) / distance)); 
 	}
 }
 
