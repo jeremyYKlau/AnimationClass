@@ -29,11 +29,18 @@
 #include "glad/glad.h"
 #include <GLFW/glfw3.h>
 
+//for my sphere
+#include <glm/glm.hpp>
+#include <glm/gtx/transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
+
 #include "ShaderTools.h"
 #include "Vec3f.h"
 #include "Mat4f.h"
 #include "OpenGLMatrixTools.h"
 #include "Camera.h"
+
+using namespace std;
 
 //==================== GLOBAL VARIABLES ====================//
 /*	Put here for simplicity. Feel free to restructure into
@@ -115,15 +122,20 @@ std::string GL_ERROR();
 int main(int, char **);
 
 std::vector<Vec3f> position(float s);
-void motionAlongCurve(std::vector<Vec3f> objectPos, float bt, float DS, int i);
+
+Vec3f ArcLengthParameterization(Vec3f bT, std::vector<Vec3f> p, int &i, float DS);
 
 float L; //length of line
-float DS = 0.4; //defined change in s that is used to traverse the piece wise curve
+float DS = 0.1; //defined change in s that is used to traverse the piece wise curve
 float dT;
-float bCurrent;
-std::vector<Vec3f> objectPos;
+int iT; // i variable for arcLengthParameterization 
+int start; //highestpoint on the track
+
+Vec3f startingPos;
+Vec3f objectPos;
 std::vector<Vec3f> gravity;
 std::vector<Vec3f> curvePoints;
+std::vector<float> segmentLengths;
 //==================== FUNCTION DEFINITIONS ====================//
 
 void displayFunc() {
@@ -158,18 +170,41 @@ void displayFunc() {
 
 void startingPoint()
 {
-	M = TranslateMatrix(curvePoints[20].x(), curvePoints[20].y(), curvePoints[20].z());
+	float height = 0;
+	//following for getting the highest point
+	for (unsigned i = 0; i < curvePoints.size(); i++)
+	{
+		if (curvePoints[i].y() > height)
+		{
+			height = curvePoints[i].y();
+			start = i;
+			cout << i << endl;
+		}
+	}
+	iT = start;
+	M = TranslateMatrix(curvePoints[start].x(), curvePoints[start].y(), curvePoints[start].z());
 	setupModelViewProjectionTransform();
 	reloadMVPUniform();
 }
 void animateQuad(float t) {
-	M = RotateAboutYMatrix(100 * t);
+	
+	/*
+	//test code to make sure it moves
+	float x = 0;
+	float y = 0;
+	float z = 0;
+	
+	int i = floor(t) ;
+	if(i < (signed)curvePoints.size() -1 ){
+		x = (curvePoints[i+1].x() - curvePoints[i].x());
+		y = (curvePoints[i+1].y() - curvePoints[i].y());
+		z = (curvePoints[i+1].z() - curvePoints[i].z());
+	}*/
 
-	//float s = (std::sin(t) + 1.f) / 2.f;
-	//float x = (1 - s) * (10) + s * (-10);
-	//this matrix does all the translations pass this on based off the movement of the position
-
-	M = TranslateMatrix(curvePoints[0].x(), curvePoints[0].y(), curvePoints[0].z()) * M;
+	Vec3f trans = ArcLengthParameterization(objectPos, curvePoints, iT, DS);
+	objectPos = trans;
+	//M = TranslateMatrix(curvePoints[0].x(), curvePoints[0].y(), curvePoints[0].z()) * M;
+	M = TranslateMatrix(trans.x(), trans.y(), trans.z());
 	setupModelViewProjectionTransform();
 	reloadMVPUniform();
 }
@@ -210,6 +245,7 @@ void loadLineGeometryToGPU() {
 	{
 		subDivision(curvePoints);
 	}
+	
 	glBindBuffer(GL_ARRAY_BUFFER, line_vertBufferID);
 	glBufferData(GL_ARRAY_BUFFER,
                sizeof(Vec3f) * (sizeof(points)*16), // byte size of Vec3f, Change to fit amount of points rendered each time
@@ -221,31 +257,35 @@ std::vector<Vec3f> position(float s)
 {
 	std::vector<Vec3f> p;
 	p.push_back(Vec3f(curvePoints[s].x(), curvePoints[s].y(), curvePoints[s].z()));
-	//std::cout << p[0].x() << std::endl;
 	return p;
 }
 
-void motionAlongCurve(std::vector<Vec3f> objectPos, float bt, float DS, int i)
+//curvePoints = {pi} currently global
+//objectPos = bT currently global
+//float DS is global for now even though passed as parameter
+//float iT is just a way to track current place on curve
+
+Vec3f ArcLengthParameterization(Vec3f bT, std::vector<Vec3f> p, int &i, float dS)
 {
-	int numPoints = curvePoints.size();
-	float x = (objectPos[(i+1) % numPoints].x() - objectPos[i].x());
-	float y = (objectPos[(i+1) % numPoints].y() - objectPos[i].y());
-	float z = (objectPos[(i+1) % numPoints].z() - objectPos[i].z());
-	float distance = sqrt((x*x) + (y*y) + (z*z));
-	if ((distance - bt) > DS)
+	float magnitudeBT = p[(i+1) % p.size()].distance(bT);
+	if (magnitudeBT > dS)
 	{
-		bt =+ distance;
+		bT = bT + dS*((p[(i+1) % p.size()] - bT) / magnitudeBT);
+		return bT;
 	}
-	else 
+	else
 	{
-		float DSprime = distance - bt;
-		i = i+1;
-		while(DSprime + distance < DS)
+		float dSPrime = magnitudeBT;
+		i = (i+1) % p.size();
+		float magnitudePi = p[(i+1) % p.size()].distance(p[i]);
+		while(dSPrime + magnitudePi < dS)
 		{
-			DSprime = DSprime + distance;
-			i = i + 1;
+			dSPrime = dSPrime + magnitudePi;
+			i = (i+1) % p.size();
 		}
-		return ((DS - DSprime)*((objectPos[i] - objectPos[(i+1) % numPoints]) / distance)); 
+		bT = ((dS - dSPrime)*(p[(i+1) % p.size()] - p[i])/magnitudePi) + bT;
+		cout << bT << endl;
+		return bT;
 	}
 }
 
@@ -424,11 +464,19 @@ int main(int argc, char **argv) {
   init(); // our own initialize stuff func
 
   float t = 0; //initial time value
-  float dt = 0.05; //changes the time interval to speed up or slow down simulation
-
+  float dt = 0.01; //changes the time interval to speed up or slow down simulation
+  
+  //gets the highest startingPoint on the curve
+  startingPoint();
+  
+  //set indexing value to the start (highest) point
+  iT = start;
+  
+  //Initial position of the object on the highest part of the curve thanks to startingPoint()
+  objectPos = curvePoints[iT];
+  
   while (glfwGetKey(window, GLFW_KEY_ESCAPE) != GLFW_PRESS &&
          !glfwWindowShouldClose(window)) {
-	startingPoint();
     if (g_play) {
       t += dt;
       animateQuad(t);
