@@ -39,6 +39,11 @@
 #include "Mat4f.h"
 #include "OpenGLMatrixTools.h"
 #include "Camera.h"
+#include "Vec3f_FileIO.h"
+
+
+static float PI = 3.14159265359;
+
 
 using namespace std;
 
@@ -121,21 +126,31 @@ void reloadColorUniform(float r, float g, float b);
 std::string GL_ERROR();
 int main(int, char **);
 
+//currently unused set position function
 std::vector<Vec3f> position(float s);
 
+//this is used for iT's intial starting point
+void startingPoint();
+//velocity to be multiplied by dt to get DS
+float velocity(float highest, float height);
+
+//algorithm 1 in the guideline sheet on algorithmic botany website http://algorithmicbotany.org/courses/CPSC587/Winter2017/CPSC587_687_RollerCoaster.pdf
 Vec3f ArcLengthParameterization(Vec3f bT, std::vector<Vec3f> p, int &i, float DS);
 
 float L; //length of line
-float DS = 0.1; //defined change in s that is used to traverse the piece wise curve
-float dT;
+float DS; //defined change in s that is used to traverse the piece wise curve
+float highest;
 int iT; // i variable for arcLengthParameterization 
 int start; //highestpoint on the track
+float dt = 0.1; //changes the time interval to speed up or slow down simulation
 
-Vec3f startingPos;
-Vec3f objectPos;
-std::vector<Vec3f> gravity;
-std::vector<Vec3f> curvePoints;
-std::vector<float> segmentLengths;
+Vec3f startingPos; //starting position currently highest point
+Vec3f objectPos; //the vec3 to keep track of the model's position
+float gravity = 9.81/10; // have to change gravity to make it scaled to the size of the track
+std::vector<Vec3f> verts; //geometry vertices
+std::vector<Vec3f> curvePoints; //actually curve points not just control points
+std::vector<float> segmentLengths;; //segmentLengths if needed currently not used
+
 //==================== FUNCTION DEFINITIONS ====================//
 
 void displayFunc() {
@@ -147,13 +162,13 @@ void displayFunc() {
   // ===== DRAW QUAD ====== //
   MVP = P * V * M;
   reloadMVPUniform();
-  reloadColorUniform(1, 0, 1);
+  reloadColorUniform(1, 0, 0);
 
   // Use VAO that holds buffer bindings
   // and attribute config of buffers
   glBindVertexArray(vaoID);
   // Draw Quads, start at vertex 0, draw 4 of them (for a quad)
-  glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+  glDrawArrays(GL_TRIANGLE_STRIP, 0, verts.size());
 
   // ==== DRAW LINE ===== //
   MVP = P * V * line_M;
@@ -168,38 +183,50 @@ void displayFunc() {
   
 }
 
+float velocityFreeFalling(float highest, float height)
+{
+	float vel = sqrt(2*gravity*(highest - height));
+	cout << vel << endl;
+	if (vel == 0)
+	{
+		vel = 0.02;
+	}
+	return vel;
+}
+
+float velocityIncline(float highest)
+{
+	float vel = sqrt(2*gravity*highest);
+	if (vel == 0)
+	{
+		vel = 0.02;
+	}
+	return vel;
+}
+
 void startingPoint()
 {
-	float height = 0;
+	float highestPos = 0;
 	//following for getting the highest point
 	for (unsigned i = 0; i < curvePoints.size(); i++)
 	{
-		if (curvePoints[i].y() > height)
+		if (curvePoints[i].y() > highestPos)
 		{
-			height = curvePoints[i].y();
+			highestPos = curvePoints[i].y();
 			start = i;
-			cout << i << endl;
 		}
 	}
 	iT = start;
+	highestPos = start;
 	M = TranslateMatrix(curvePoints[start].x(), curvePoints[start].y(), curvePoints[start].z());
 	setupModelViewProjectionTransform();
 	reloadMVPUniform();
 }
+
 void animateQuad(float t) {
-	
-	/*
-	//test code to make sure it moves
-	float x = 0;
-	float y = 0;
-	float z = 0;
-	
-	int i = floor(t) ;
-	if(i < (signed)curvePoints.size() -1 ){
-		x = (curvePoints[i+1].x() - curvePoints[i].x());
-		y = (curvePoints[i+1].y() - curvePoints[i].y());
-		z = (curvePoints[i+1].z() - curvePoints[i].z());
-	}*/
+
+
+	DS = dt*velocityFreeFalling(highest, curvePoints[(iT+1) % curvePoints.size()].y());
 
 	Vec3f trans = ArcLengthParameterization(objectPos, curvePoints, iT, DS);
 	objectPos = trans;
@@ -210,17 +237,67 @@ void animateQuad(float t) {
 }
 
 void loadQuadGeometryToGPU() {
-	// Just basic layout of floats, for a quad
-	// 3 floats per vertex, 4 vertices
-	std::vector<Vec3f> verts;
-	verts.push_back(Vec3f(-0.5, -0.5, 0));
-	verts.push_back(Vec3f(-0.5, 0.5, 0));
-	verts.push_back(Vec3f(0.5, -0.5, 0));
-	verts.push_back(Vec3f(0.5, 0.5, 0));
+	
+	
+	/*std::vector<Vec3f> verts;
+	verts.push_back(Vec3f(-0.2, -0.2, 0));
+	verts.push_back(Vec3f(-0.2, 0.2, 0));
+	verts.push_back(Vec3f(0.2, -0.2, 0));
+	verts.push_back(Vec3f(0.2, 0.2, 0));
+	*/
+	
+	//interval is for how much space to partition each angle when generating new triangle
+	int interval = 15;
+	//r is the radius of sphere
+	float r = 0.5;
+	//interval but calculated in sphereical coordinates
+	float t;
+	float x = 0;
+	float y = 0;
+	float z = 0;
+	/*
+	*NOTE*
+	Very long code used in rendering cpsc 591 created by me to draw a sphere, I removed the texture part as I don't want to worry about having to use uv coordinates here and creating new vbo for them
+	using phi and theta create intervals to create a single 4 point quad to render as part of the hemisphere
+	these 4 points are stored in an array of vec3's
+	*/
+	for (int phi = 0; phi <= 180; phi = phi + interval)
+	{
+		for (int theta = 0; theta <= 360; theta = theta + interval)
+		{
+			t = interval*(PI/180.f);
+			//Point 1
+			x = r*(cos(theta*(PI/180.f))*sin(phi*(PI/180.f)));
+			y = r*(sin(theta*(PI/180.f))*sin(phi*(PI/180.f)));
+			z = r*cos(phi*(PI/180.f));
+			verts.push_back(Vec3f(x,y,z));
+
+
+			//Point 2
+			x = r*(cos(theta*(PI/180.f)+t)*sin(phi*(PI/180.f)));
+			y = r*(sin(theta*(PI/180.f)+t)*sin(phi*(PI/180.f)));
+			z = r*cos(phi*(PI/180.f));
+			verts.push_back(Vec3f(x,y,z));
+
+
+			//Point 3
+			x = r*(cos(theta*(PI/180.f))*sin(phi*(PI/180.f)+t));
+			y = r*(sin(theta*(PI/180.f))*sin(phi*(PI/180.f)+t));
+			z = r*cos(phi*(PI/180.f)+t);
+			verts.push_back(Vec3f(x,y,z));
+
+
+			//Point 4
+			x = r*(cos(theta*(PI/180.f)+t)*sin(phi*(PI/180.f)+t));
+			y = r*(sin(theta*(PI/180.f)+t)*sin(phi*(PI/180.f)+t));
+			z = r*cos(phi*(PI/180.f)+t);
+			verts.push_back(Vec3f(x,y,z));
+		}
+	}
 
 	glBindBuffer(GL_ARRAY_BUFFER, vertBufferID);
 	glBufferData(GL_ARRAY_BUFFER,
-               sizeof(Vec3f) * 4, // byte size of Vec3f, 4 of them
+               sizeof(Vec3f) * verts.size(), // byte size of Vec3f, 4 of them
                verts.data(),      // pointer (Vec3f*) to contents of verts
                GL_STATIC_DRAW);   // Usage pattern of GPU buffer
 }
@@ -229,14 +306,32 @@ void loadLineGeometryToGPU() {
 	// Draws the line
 	// draws lines from the following points
 
+	std::string file( "track.txt" );
+	
 	std::vector<Vec3f> points;
 	
-	points.push_back(Vec3f(-10,0,0));
+	//currently draws an extra point don't know how to fix it because the line is actually physically correct
+	//std::vector<Vec3f> points;
+	loadVec3fFromFile( points, file);
+	for( auto & v : points )
+	{
+		points.push_back(v);
+	}
+	
+	/*points.push_back(Vec3f(-10,0,0));
 	points.push_back(Vec3f(0,5,0));
 	points.push_back(Vec3f(6,3,2));
 	points.push_back(Vec3f(2,-2,4));
-	points.push_back(Vec3f(0,3,4));
+	points.push_back(Vec3f(0,6,4));
 	points.push_back(Vec3f(-5,0,2));
+*/
+	/*points.push_back(Vec3f(-10,10,0));
+	points.push_back(Vec3f(-5,0,-3));
+	points.push_back(Vec3f(-3,0,-6));
+	points.push_back(Vec3f(0,0,-5));
+	points.push_back(Vec3f(10,10,-2));
+	points.push_back(Vec3f(-3,0,1));
+	*/
 	
 	//subdivide line using chaikin method until smooth
 	//have to call it on intial points once due to my bad programming
@@ -248,7 +343,7 @@ void loadLineGeometryToGPU() {
 	
 	glBindBuffer(GL_ARRAY_BUFFER, line_vertBufferID);
 	glBufferData(GL_ARRAY_BUFFER,
-               sizeof(Vec3f) * (sizeof(points)*16), // byte size of Vec3f, Change to fit amount of points rendered each time
+               sizeof(Vec3f) * (sizeof(points)*curvePoints.size()), // byte size of Vec3f, Change to fit amount of points rendered each time
                curvePoints.data(),      // pointer (Vec3f*) to contents of verts
                GL_STATIC_DRAW);   // Usage pattern of GPU buffer
 }
@@ -284,7 +379,6 @@ Vec3f ArcLengthParameterization(Vec3f bT, std::vector<Vec3f> p, int &i, float dS
 			i = (i+1) % p.size();
 		}
 		bT = ((dS - dSPrime)*(p[(i+1) % p.size()] - p[i])/magnitudePi) + bT;
-		cout << bT << endl;
 		return bT;
 	}
 }
@@ -406,7 +500,7 @@ void init() {
   glEnable(GL_DEPTH_TEST);
   glPointSize(50);
 
-  camera = Camera(Vec3f{0, 0, 5}, Vec3f{0, 0, -1}, Vec3f{0, 1, 0});
+  camera = Camera(Vec3f{0, 0, 15}, Vec3f{0, 0, -1}, Vec3f{0, 1, 0});
 
   // SETUP SHADERS, BUFFERS, VAOs
 
@@ -435,7 +529,7 @@ int main(int argc, char **argv) {
   glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
   window =
-      glfwCreateWindow(WIN_WIDTH, WIN_HEIGHT, "CPSC 587/687 Tut03", NULL, NULL);
+      glfwCreateWindow(WIN_WIDTH, WIN_HEIGHT, "CPSC 587 bead on a wire", NULL, NULL);
   if (!window) {
     glfwTerminate();
     exit(EXIT_FAILURE);
@@ -462,16 +556,14 @@ int main(int argc, char **argv) {
   std::cout << GL_ERROR() << std::endl;
 
   init(); // our own initialize stuff func
-
-  float t = 0; //initial time value
-  float dt = 0.01; //changes the time interval to speed up or slow down simulation
   
+  DS = 0.1;
+  float t = 0; //initial time value
+
   //gets the highest startingPoint on the curve
   startingPoint();
-  
-  //set indexing value to the start (highest) point
-  iT = start;
-  
+  highest = curvePoints[iT].y();
+
   //Initial position of the object on the highest part of the curve thanks to startingPoint()
   objectPos = curvePoints[iT];
   
