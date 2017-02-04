@@ -1,0 +1,64 @@
+/* general body properties */
+
+BODY {
+ background-color: #c0c0c0;
+ color: black;
+ font-family: helvetica;
+}
+
+/* configure link properties */
+
+A { text-decoration: none; }
+A:link { color: blue; }
+A:visited { color: darkmagenta; }
+
+/* configure paragraph properties */
+
+P {
+ color: black;
+ text-align: justify;
+/*
+  for debugging purposes:
+  background-color: #f0b0b0
+*/
+}
+
+UL.just {
+ text-align: justify;
+/*
+  for debugging purposes:
+  background-color: #f0b0b0
+*/
+}
+
+H1 {
+ color: brown;
+ font-weight: bold;
+ font-size: 240%;
+ font-family: times;
+}
+
+H2 {
+ color: #ffffff;
+ background: #006666;
+ font-weight: bold;
+ padding: 3pt;
+ margin: 2pt;
+ border: 1pt solid #003333;
+}
+
+H3 {
+ color: #330000;
+ font-weight: bold;
+ margin: 2pt;
+}
+
+H4 {
+ font-weight: bold;
+}
+
+H5 {
+ font-weight: bold;
+ color: darkblue;
+ font-size: 120%;
+}
