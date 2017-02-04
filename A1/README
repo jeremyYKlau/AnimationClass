@@ -21,3 +21,6 @@ shift+arrow right	: roll camera right
 
 space bar			: pause/play
 esc					: exit
+
+Jeremy Lau bead on wire complete code
+Currently a sphere runs on a wire with velocity physics implemented.
