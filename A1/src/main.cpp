@@ -212,15 +212,8 @@ float velocityIncline(float v)
 //this one doesn't work
 float velocityDecelerate(float vel, int dLength)
 {
-	vel = vel * (iT / dLength);
+	vel = vel * ((start-iT) / dLength);
 	return vel;
-}
-
-//for getting the temporary tangent at a point
-Vec3f tangent(int &i, std::vector<Vec3f> p)
-{
-	Vec3f tangent = p[(i+1) % p.size()] - p[(i-1) % p.size()];
-	return tangent;
 }
 
 //to calculate the normalDirection to use to get centripetal force
@@ -237,17 +230,27 @@ float curvature(int &i, std::vector<Vec3f> p)
 	float x = ((p[(i+1) % p.size()] - (2*p[i]) + p[(i-1) % p.size()]).length())/2;
 	float c = ((p[(i+1) % p.size()] - p[(i-1) % p.size()]).length())/2;
 	float radius = ((x*x) + (c*c))/(2*x);
-	float kurve = (2*x)/((x*x)+(c*c));
-	return kurve;
+	float k = (2*x)/((x*x)+(c*c));
+	return k;
 }
 
-//from curvature kurve is the k and from normalDirection nD is the n value in this function
+//separate method from curvature just dedicated to returning the radius
+float radius(int &i, std::vector<Vec3f> p)
+{
+	float x = ((p[(i+1) % p.size()] - (2*p[i]) + p[(i-1) % p.size()]).length())/2;
+	float c = ((p[(i+1) % p.size()] - p[(i-1) % p.size()]).length())/2;
+	float radius = ((x*x) + (c*c))/(2*x);
+	return radius;
+}
+
+//from curvature k is the k and from normalDirection nD is the n value in this function
 Vec3f centripetalAcceleration(float k, Vec3f n)
 {
+	cout << k*n << endl;
 	return k*n;
 }
 
-//pass speed into here
+//pass centripetal force into here
 Vec3f normalForce(Vec3f aC)
 {
 	Vec3f grav = Vec3f(0.0, 9.81, 0.0);
@@ -256,6 +259,51 @@ Vec3f normalForce(Vec3f aC)
 	return aC;
 }
 
+//for getting the temporary tangent at a point
+Vec3f tangent(int &i, std::vector<Vec3f> p)
+{
+	Vec3f tangent = p[(i+1) % p.size()] - p[(i-1) % p.size()];
+	return tangent;
+}
+
+//the normal vec3 for the fernet frame (not implemented)
+Vec3f frenetNormal (float v, float r, Vec3f n)
+{
+	Vec3f grav = Vec3f(0.0, 9.81, 0.0);
+	Vec3f norm = ((((v*v)/r)*n) + grav);
+	float unitNorm = norm.length();
+	return norm/unitNorm;
+}
+
+/* below are some functions for the fernet frame that currently do not work
+//pass in tangent of current point i and fernetNormal of current point i
+Vec3f biNormal(Vec3f T, Vec3f N)
+{
+	float unitT = T.length();
+	Vec3f dT = T/unitT;
+	Vec3f biNorm = crossProduct(dT, N);
+	return biNorm;
+}
+
+//Create the fernet Frame
+// P is the points current position so objectPos
+// N is the normal so the value we get from frenet normal vec3
+// B is the binormal calculated in the function binormal
+// T is the temporary tangent calculated from temporary tangent from function tangent
+Mat4f fernetFrame (Vec3f P, Vec3f N, Vec3f T, Vec3f B)
+{
+	float unitT = T.length();
+	Vec3f dT = T/unitT;
+	Mat4f fernetF = (
+		  B.x(), B.y(), B.z(),
+		  N.x(), N.y(), N.z(),
+		  dT.x(), dT.y(), dT.z(),
+		  P.x(), P.y(), P.z());
+	return fernetF;
+}
+*/
+
+//method for finding the starting point of the object whether for highest or lowest
 void startingPoint()
 {
 	float highestPos = 0;
@@ -267,17 +315,13 @@ void startingPoint()
 		{
 			highestPos = curvePoints[i].y();
 			peak = i;
-			//start = i;
-			cout << "Highest point: " << peak << endl;
 		}
 		else if (curvePoints[i].y() < lowest)
 		{
 			lowest = curvePoints[i].y();
 			start = i;
-			cout << "starting lowest: " << start << endl;
 		}
 	}
-	cout << "Total amount of points " << curvePoints.size() << endl;
 	iT = start;
 	lowest = start;
 	highest = highestPos;
@@ -286,29 +330,30 @@ void startingPoint()
 	reloadMVPUniform();
 }
 
+//all animation done in here
 void animateQuad(float t) {
 
-	cout << "CURRENT POINT: " << iT << endl;
-	int decel = (start - 50) % curvePoints.size();
+	int decel = (start-50) % curvePoints.size();
 	if ((iT < peak) && (iT >= (start - decel)))
 	{
-		cout << "INCLINE" << endl;
 		speed = velocityIncline(vmin);
 	}
 	else if ((iT >= (decel)) && (iT <= start))
 	{
-		cout << "DECEL " << endl;
 		speed = velocityDecelerate(speed, decel);
 	}
 	else 
 	{
 		speed = velocityFreeFalling(highest, curvePoints[(iT+1) % curvePoints.size()].y());
 	}
-	cout << "SPEED " << speed << endl;
 	//speed = velocityIncline(vmin); 
 	//speed = velocityFreeFalling(highest, curvePoints[(iT+1) % curvePoints.size()].y());
 	//speed = velocityDecelerate(vmin, 10);
 	DS = dt*speed;
+	
+	tangent(iT, curvePoints);
+	Vec3f aC = centripetalAcceleration(curvature(iT, curvePoints), normalDirection(iT, curvePoints));
+	Vec3f fO = normalForce(aC);
 	
 	Vec3f trans = ArcLengthParameterization(objectPos, curvePoints, iT, DS);
 	objectPos = trans;
@@ -319,13 +364,6 @@ void animateQuad(float t) {
 }
 
 void loadQuadGeometryToGPU() {
-	
-	/*
-	verts.push_back(Vec3f(-0.2, -0.2, 0));
-	verts.push_back(Vec3f(-0.2, 0.2, 0));
-	verts.push_back(Vec3f(0.2, -0.2, 0));
-	verts.push_back(Vec3f(0.2, 0.2, 0));
-	*/
 	
 	//interval is for how much space to partition each angle when generating new triangle
 	int interval = 15;
@@ -338,7 +376,7 @@ void loadQuadGeometryToGPU() {
 	float z = 0;
 	/*
 	*NOTE*
-	Very long code used in rendering cpsc 591 created by me to draw a sphere, I removed the texture part as I don't want to worry about having to use uv coordinates here and creating new vbo for them
+	Very long code used in rendering cpsc 591 created by me to draw a sphere, I removed the texture part
 	using phi and theta create intervals to create a single 4 point quad to render as part of the sphere
 	*/
 	for (int phi = 0; phi <= 180; phi = phi + interval)
