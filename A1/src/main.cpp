@@ -363,63 +363,6 @@ void animateQuad(float t) {
 	reloadMVPUniform();
 }
 
-void loadQuadGeometryToGPU() {
-	
-	//interval is for how much space to partition each angle when generating new triangle
-	int interval = 15;
-	//r is the radius of sphere
-	float r = 0.5;
-	//interval but calculated in sphereical coordinates
-	float t;
-	float x = 0;
-	float y = 0;
-	float z = 0;
-	/*
-	*NOTE*
-	Very long code used in rendering cpsc 591 created by me to draw a sphere, I removed the texture part
-	using phi and theta create intervals to create a single 4 point quad to render as part of the sphere
-	*/
-	for (int phi = 0; phi <= 180; phi = phi + interval)
-	{
-		for (int theta = 0; theta <= 360; theta = theta + interval)
-		{
-			t = interval*(PI/180.f);
-			//Point 1
-			x = r*(cos(theta*(PI/180.f))*sin(phi*(PI/180.f)));
-			y = r*(sin(theta*(PI/180.f))*sin(phi*(PI/180.f)));
-			z = r*cos(phi*(PI/180.f));
-			verts.push_back(Vec3f(x,y,z));
-
-
-			//Point 2
-			x = r*(cos(theta*(PI/180.f)+t)*sin(phi*(PI/180.f)));
-			y = r*(sin(theta*(PI/180.f)+t)*sin(phi*(PI/180.f)));
-			z = r*cos(phi*(PI/180.f));
-			verts.push_back(Vec3f(x,y,z));
-
-
-			//Point 3
-			x = r*(cos(theta*(PI/180.f))*sin(phi*(PI/180.f)+t));
-			y = r*(sin(theta*(PI/180.f))*sin(phi*(PI/180.f)+t));
-			z = r*cos(phi*(PI/180.f)+t);
-			verts.push_back(Vec3f(x,y,z));
-
-
-			//Point 4
-			x = r*(cos(theta*(PI/180.f)+t)*sin(phi*(PI/180.f)+t));
-			y = r*(sin(theta*(PI/180.f)+t)*sin(phi*(PI/180.f)+t));
-			z = r*cos(phi*(PI/180.f)+t);
-			verts.push_back(Vec3f(x,y,z));
-		}
-	}
-
-	glBindBuffer(GL_ARRAY_BUFFER, vertBufferID);
-	glBufferData(GL_ARRAY_BUFFER,
-               sizeof(Vec3f) * verts.size(), // byte size of Vec3f, 4 of them
-               verts.data(),      // pointer (Vec3f*) to contents of verts
-               GL_STATIC_DRAW);   // Usage pattern of GPU buffer
-}
-
 void loadLineGeometryToGPU() {
 	// Draws the line
 	// draws lines from the following points
