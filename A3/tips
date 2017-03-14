@@ -1,0 +1,55 @@
+Equations that will be used
+UPPERCASE = Variables
+lowercase = subscripts
+
+F = MA //Newton's law
+Fab = -Fba //Net sum of force equals zero a closed system
+Fs = -K(X-Xo) //Spring force however this will never stop moving so we require a damping force
+Fd = -BV //Damping force
+Ft = Fs + Fd ( + Fg if you want gravity) //total force
+
+Normaldamped won't converge to 0 spring force
+Underdamped will converge to 0 for spring force eventually
+Criticallydamped is when the spring converges to 0 force as soon as possible without any oscilation
+AVOID Overdamped it will look weird goes to 0
+Aim for underdamped
+
+Part one mass on spring
+two points fixed point and a non fixed mass
+at every point in simulation we want to get the length of mass to fixed point and compare it to the Xo
+
+Part two chain of springs (rope)
+Fixed point and a series of masses
+Each mass has a position and velocity (different velocity, all of them probably will have the same mass)
+Each mass up the chain holds more mass to the bottom
+Tip: Start the chain at an angle to see swinging motion and do the simulation in 2D (use 3d vecs just 0 the z component
+Will need an array of pointers
+SMass* springs[] {
+
+}
+
+Part three jello cube
+Cube with an array of points (subdivide probably into a 3X3 cube)
+Connect them all to a single point in the middle
+Indexing or another way (TA reccomended) 
+Iterate through all points adjacent from a point n, every edge should have a sping at the minimum
+Write an algorithm for this one don't do it while creating the program
+Will want to drop it or have movement to simulate behavior
+Also may want to use smaller time steps for this one or lower height to drop cube from to avoid squishing to a flat line
+
+Part four cloth
+Have a large grid of points
+Can do it explicitly or iterate with an algorithm could probably use the same one as part three
+Fixed points more then one probably the top corners will suffice
+However this will create a problem when the connect springs have gravity on them where all the points will fold over and the cloth will just fold over itself
+Instead we want diagonal springs (sheering springs) so that when the gravity case happens the cloth won't just fold over and become perfectly flat
+0---0
+|\ /|
+| X |
+|/ \|
+0---0
+Kind of a diagram of how the spring should look between four points (square) of the cloth
+
+NOTE not needed:
+You can have other springs extended further to connect other points then adjacent to create a better simulation but further extended springs should have lower influence.
+
