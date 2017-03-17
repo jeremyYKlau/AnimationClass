@@ -82,6 +82,21 @@ float WIN_FOV = 60;
 float WIN_NEAR = 0.01;
 float WIN_FAR = 1000;
 
+//stucture for the masses
+struct Mass {
+	float force;
+	Vec3f position;
+	float velocity;
+	float mass;
+};
+
+//structure for the spring
+struct Spring {
+	Mass *a, *b;
+	float stiffness; //k
+	float damping; //-b*v
+};
+
 //==================== FUNCTION DECLARATIONS ====================//
 void displayFunc();
 void resizeFunc();
@@ -112,32 +127,44 @@ void reloadColorUniform(float r, float g, float b);
 std::string GL_ERROR();
 int main(int, char **);
 
-//stucture for the masses
-struct Mass {
-	float force;
-	Vec3f position;
-	float velocity;
-	float mass;
-};
+//global storage of points for creating the initial mass placements
+std::vector<Vec3f> massPos;
+//global storage of all masses and springs
+std::vector<Mass> masses;
+std::vector<Spring> springs;
+//constants for damping constant
+float b = 0.5;
 
-//structure for the spring
-struct Spring {
-	Mass *a, *b;
-	float stiffness;
-	float damping;
-};
 
+//solving functions
 /*
-//solving function for now don't know where to put it just given in tutorial
-float semiEuler(vector<float> v, vector<Vec3f> x, float t) {
-	vTemp = 
-	xTemp = 
+float hookesLaw(Spring s, Mass m){
+	float Force = s.stiffness*(m.position - equilibrium)-(b*m.velocity);
 }
 
-float resolveForce()
-{
+float semiEuler(Mass m, Spring s, float dt) {
+	float vTemp = v + ((-s.stiffness/m.mass)*(m.position-tempPos)-b*mass.velocity)
+	Vec3f xTemp = x + vTemp;
+}
+
+float applyForce(Spring s) {
 	
-}*/
+}
+
+float resolveForce(float dt, Mass m) {
+	
+	semiEuler();
+}
+
+void solveMassSpring(float dt){
+	for(int s; s <= springs.size(); s++){
+		applyForce(s);
+	}
+	for(int m; m <= masses.size(); m++){
+		resolveForce(dt, m);
+	}
+}
+*/
 
 //==================== FUNCTION DEFINITIONS ====================//
 
@@ -156,8 +183,10 @@ void displayFunc() {
   // and attribute config of buffers
   glBindVertexArray(vaoID);
   // Draw Quads, start at vertex 0, draw 4 of them (for a quad)
-  glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+  //glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
+  // Draw masses as single points for now
+  glDrawArrays(GL_POINTS, 0, 2);
   // ==== DRAW LINE ===== //
   MVP = P * V * line_M;
   reloadMVPUniform();
@@ -170,18 +199,6 @@ void displayFunc() {
   // Draw lines
   glDrawArrays(GL_LINES, 0, 2);
   
-}
-
-void animateQuad(float t) {
-  M = RotateAboutYMatrix(100 * t);
-
-  float s = (std::sin(t) + 1.f) / 2.f;
-  float x = (1 - s) * (10) + s * (-10);
-
-  M = TranslateMatrix(x, 0, 0) * M;
-
-  setupModelViewProjectionTransform();
-  reloadMVPUniform();
 }
 
 void loadQuadGeometryToGPU() {
@@ -200,28 +217,22 @@ void loadQuadGeometryToGPU() {
                GL_STATIC_DRAW);   // Usage pattern of GPU buffer
 }
 
-void createMass() {
-  // Just basic layout of floats, for a quad
-  // 3 floats per vertex, 4 vertices
-  std::vector<Vec3f> verts;
-  verts.push_back(Vec3f(-0.5, -0.5, 0));
-  verts.push_back(Vec3f(-0.5, 1, 0));
-  verts.push_back(Vec3f(0, -0.5, 0));
-  verts.push_back(Vec3f(0, 1, 0));
+void createMass(Vec3f pos) {
+  massPos.push_back(pos);
 
   glBindBuffer(GL_ARRAY_BUFFER, vertBufferID);
   glBufferData(GL_ARRAY_BUFFER,
-               sizeof(Vec3f) * 4, // byte size of Vec3f, 4 of them
-               verts.data(),      // pointer (Vec3f*) to contents of verts
+               sizeof(Vec3f) * 2, // byte size of Vec3f, 4 of them
+               massPos.data(),      // pointer (Vec3f*) to contents of verts
                GL_STATIC_DRAW);   // Usage pattern of GPU buffer
 }
 
-void loadLineGeometryToGPU() {
+void loadLineGeometryToGPU(Vec3f pos1, Vec3f pos2) {
   // Just basic layout of floats, for a quad
   // 3 floats per vertex, 4 vertices
   std::vector<Vec3f> verts;
-  verts.push_back(Vec3f(-10, 0, 0));
-  verts.push_back(Vec3f(10, 0, 0));
+  verts.push_back(pos1);
+  verts.push_back(pos2);
 
   glBindBuffer(GL_ARRAY_BUFFER, line_vertBufferID);
   glBufferData(GL_ARRAY_BUFFER,
@@ -337,8 +348,23 @@ void init() {
 
   generateIDs();
   setupVAO();
-  loadQuadGeometryToGPU();
-  loadLineGeometryToGPU();
+  createMass(Vec3f(0, 1, 0));
+  createMass(Vec3f(0, -1, 0));
+  loadLineGeometryToGPU(massPos[0],massPos[1]);
+  
+  //initialize the 2 masses and the spring
+  Mass m1;
+  Mass m2;
+  Spring s1;
+  
+  masses.push_back(m1);
+  masses.push_back(m2);
+  springs.push_back(s1);
+  
+  m1.position = massPos[0];
+  m1.position = massPos[1];
+  s1.a = &m1;
+  s1.b = &m2;
 
   loadModelViewMatrix();
   reloadProjectionMatrix();
@@ -394,10 +420,8 @@ int main(int argc, char **argv) {
   while (glfwGetKey(window, GLFW_KEY_ESCAPE) != GLFW_PRESS &&
          !glfwWindowShouldClose(window)) {
 
-    if (g_play) {
-      t += dt;
-      //animateQuad(t);
-    }
+    t += dt;
+    //solveMassSpring(t);
 
     displayFunc();
     moveCamera();
