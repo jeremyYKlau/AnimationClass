@@ -34,6 +34,10 @@
 #include "Mat4f.h"
 #include "OpenGLMatrixTools.h"
 #include "Camera.h"
+#include "Mass.h"
+#include "Spring.h"
+
+using namespace std;
 
 //==================== GLOBAL VARIABLES ====================//
 /*	Put here for simplicity. Feel free to restructure into
@@ -82,21 +86,6 @@ float WIN_FOV = 60;
 float WIN_NEAR = 0.01;
 float WIN_FAR = 1000;
 
-//stucture for the masses
-struct Mass {
-	float force;
-	Vec3f position;
-	float velocity;
-	float mass;
-};
-
-//structure for the spring
-struct Spring {
-	Mass *a, *b;
-	float stiffness; //k
-	float damping; //-b*v
-};
-
 //==================== FUNCTION DECLARATIONS ====================//
 void displayFunc();
 void resizeFunc();
@@ -127,7 +116,7 @@ void reloadColorUniform(float r, float g, float b);
 std::string GL_ERROR();
 int main(int, char **);
 
-//global storage of points for creating the initial mass placements
+//global storage of points for creating the initial mass placements not used as of right now
 std::vector<Vec3f> massPos;
 //global storage of all masses and springs
 std::vector<Mass> masses;
@@ -142,9 +131,9 @@ float hookesLaw(Spring s, Mass m){
 	float Force = s.stiffness*(m.position - equilibrium)-(b*m.velocity);
 }
 
-float semiEuler(Mass m, Spring s, float dt) {
-	float vTemp = v + ((-s.stiffness/m.mass)*(m.position-tempPos)-b*mass.velocity)
-	Vec3f xTemp = x + vTemp;
+float semiEuler(Mass m, Spring s) {
+	m.velocity = m.velocity + (m.mass*m.force);
+	m.position = m.position + m.velocity;
 }
 
 float applyForce(Spring s) {
@@ -158,10 +147,10 @@ float resolveForce(float dt, Mass m) {
 
 void solveMassSpring(float dt){
 	for(int s; s <= springs.size(); s++){
-		applyForce(s);
+		s.applyForce();
 	}
 	for(int m; m <= masses.size(); m++){
-		resolveForce(dt, m);
+		m.resolveForce(dt;
 	}
 }
 */
@@ -217,9 +206,9 @@ void loadQuadGeometryToGPU() {
                GL_STATIC_DRAW);   // Usage pattern of GPU buffer
 }
 
-void createMass(Vec3f pos) {
-  massPos.push_back(pos);
-
+void createMass(Mass a) {
+  massPos.push_back(a.position);
+  masses.push_back(a);
   glBindBuffer(GL_ARRAY_BUFFER, vertBufferID);
   glBufferData(GL_ARRAY_BUFFER,
                sizeof(Vec3f) * 2, // byte size of Vec3f, 4 of them
@@ -345,18 +334,21 @@ void init() {
   camera = Camera(Vec3f{0, 0, 5}, Vec3f{0, 0, -1}, Vec3f{0, 1, 0});
 
   // SETUP SHADERS, BUFFERS, VAOs
-
+  Mass m1 = Mass(0, Vec3f(0, 1, 0), 0, 1);
+  Mass m2 = Mass(0, Vec3f(0, -1, 0), 0, 1);
+  masses.push_back(m1);
+  
+  Spring s1;
+  
   generateIDs();
   setupVAO();
-  createMass(Vec3f(0, 1, 0));
-  createMass(Vec3f(0, -1, 0));
+  createMass(m1);
+  createMass(m2);
   loadLineGeometryToGPU(massPos[0],massPos[1]);
   
   //initialize the 2 masses and the spring
-  Mass m1;
-  Mass m2;
-  Spring s1;
-  
+
+  //renders a mass, takes in a mass object
   masses.push_back(m1);
   masses.push_back(m2);
   springs.push_back(s1);
@@ -365,7 +357,7 @@ void init() {
   m1.position = massPos[1];
   s1.a = &m1;
   s1.b = &m2;
-
+  
   loadModelViewMatrix();
   reloadProjectionMatrix();
   setupModelViewProjectionTransform();
