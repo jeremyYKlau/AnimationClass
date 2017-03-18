@@ -1,5 +1,5 @@
 /*
- * Mass class that will have functions within it 
+ * Spring class that will have functions within it 
  */
 
 #ifndef Spring_H
@@ -31,4 +31,4 @@ public:
 	Vec3f springForce();
 	float applyForce();
 };
-#endif // MAT4F_H
+#endif // Spring_H

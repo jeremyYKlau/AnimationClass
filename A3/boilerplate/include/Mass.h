@@ -16,16 +16,17 @@
 
 class Mass {
 public:
-	float force;
+	Vec3f force;
 	Vec3f position;
-	float velocity;
+	Vec3f velocity;
 	float mass;
 	
 	explicit Mass();
 	~Mass();
 
-	Mass(float f, Vec3f pos, float v, float m);
+	Mass(Vec3f f, Vec3f pos, Vec3f v, float m);
 
-float resolveForce(float dT);
+	void semiEuler();
+	float resolveForce(float dT);
 };
-#endif // MAT4F_H
+#endif // Mass_H

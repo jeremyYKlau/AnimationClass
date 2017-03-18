@@ -14,7 +14,9 @@ Spring::Spring(float s, float d, Mass &a, Mass &b){
 Spring::~Spring() {}
 
 Vec3f Spring::springForce(){
-	Vec3f fs = this->stiffness*(sqrt(this->a->position*this->a->position + this->b->position*this->b->position))*(this->a->position-this->b->position);
+	Vec3f length = this->a->position - this->b->position;
+	float normalizedLength = sqrt((length.x()*length.x())+(length.y()*length.y())+(length.z()*length.z())); 
+	Vec3f fs = (-1*this->stiffness)*(normalizedLength)*(length/normalizedLength);
 	return fs;
 }
 

@@ -118,42 +118,26 @@ int main(int, char **);
 
 //global storage of points for creating the initial mass placements not used as of right now
 std::vector<Vec3f> massPos;
+
 //global storage of all masses and springs
 std::vector<Mass> masses;
 std::vector<Spring> springs;
-//constants for damping constant
-float b = 0.5;
-
-
-//solving functions
-/*
-float hookesLaw(Spring s, Mass m){
-	float Force = s.stiffness*(m.position - equilibrium)-(b*m.velocity);
-}
-
-float semiEuler(Mass m, Spring s) {
+Vec3f totalSpringForce;
+//should be correct but some questions about it
+void semiEuler(Mass m) {
 	m.velocity = m.velocity + (m.mass*m.force);
 	m.position = m.position + m.velocity;
 }
 
-float applyForce(Spring s) {
-	
-}
-
-float resolveForce(float dt, Mass m) {
-	
-	semiEuler();
-}
-
 void solveMassSpring(float dt){
-	for(int s; s <= springs.size(); s++){
-		s.applyForce();
+	for(unsigned int s = 0; s < springs.size(); s++){
+		totalSpringForce = springs[s].springForce();
 	}
-	for(int m; m <= masses.size(); m++){
-		m.resolveForce(dt;
+	for(unsigned int m = 0; m < masses.size(); m++){
+		masses[m].resolveForce(dt);
+		semiEuler(masses[m]);
 	}
-}
-*/
+}                                                                                                                                   
 
 //==================== FUNCTION DEFINITIONS ====================//
 
@@ -190,6 +174,18 @@ void displayFunc() {
   
 }
 
+void animateQuad(float t) {
+  M = RotateAboutYMatrix(100 * t);
+
+  float s = (std::sin(t) + 1.f) / 2.f;
+  float x = (1 - s) * (10) + s * (-10);
+
+  M = TranslateMatrix(x, 0, 0) * M;
+
+  setupModelViewProjectionTransform();
+  reloadMVPUniform();
+}
+
 void loadQuadGeometryToGPU() {
   // Just basic layout of floats, for a quad
   // 3 floats per vertex, 4 vertices
@@ -216,12 +212,10 @@ void createMass(Mass a) {
                GL_STATIC_DRAW);   // Usage pattern of GPU buffer
 }
 
-void loadLineGeometryToGPU(Vec3f pos1, Vec3f pos2) {
-  // Just basic layout of floats, for a quad
-  // 3 floats per vertex, 4 vertices
+void loadLineGeometryToGPU(Spring s) {
   std::vector<Vec3f> verts;
-  verts.push_back(pos1);
-  verts.push_back(pos2);
+  verts.push_back(s.a->position);
+  verts.push_back(s.b->position);
 
   glBindBuffer(GL_ARRAY_BUFFER, line_vertBufferID);
   glBufferData(GL_ARRAY_BUFFER,
@@ -334,29 +328,22 @@ void init() {
   camera = Camera(Vec3f{0, 0, 5}, Vec3f{0, 0, -1}, Vec3f{0, 1, 0});
 
   // SETUP SHADERS, BUFFERS, VAOs
-  Mass m1 = Mass(0, Vec3f(0, 1, 0), 0, 1);
-  Mass m2 = Mass(0, Vec3f(0, -1, 0), 0, 1);
-  masses.push_back(m1);
-  
-  Spring s1;
+  Mass m1 = Mass(Vec3f(0, 1, 0), Vec3f(0, 1, 0), Vec3f(0, 1, 0), 1);
+  Mass m2 = Mass(Vec3f(0, 1, 0), Vec3f(0, -1, 0), Vec3f(0, 1, 0), 1);;
+  Spring s1 = Spring(0.5, 0.0, m1, m2);
   
   generateIDs();
   setupVAO();
-  createMass(m1);
-  createMass(m2);
-  loadLineGeometryToGPU(massPos[0],massPos[1]);
   
   //initialize the 2 masses and the spring
-
+  createMass(m1);
+  createMass(m2);
+  loadLineGeometryToGPU(s1);
+  
   //renders a mass, takes in a mass object
   masses.push_back(m1);
   masses.push_back(m2);
   springs.push_back(s1);
-  
-  m1.position = massPos[0];
-  m1.position = massPos[1];
-  s1.a = &m1;
-  s1.b = &m2;
   
   loadModelViewMatrix();
   reloadProjectionMatrix();
@@ -405,16 +392,26 @@ int main(int argc, char **argv) {
   std::cout << GL_ERROR() << std::endl;
 
   init(); // our own initialize stuff func
-
-  float t = 0;
+  Mass m1 = Mass(Vec3f(0, 1, 0), Vec3f(0, 1, 0), Vec3f(0, 1, 0), 1);
+  Mass m2 = Mass(Vec3f(0, 1, 0), Vec3f(0, -1, 0), Vec3f(0, 1, 0), 1);;
+  Spring s1 = Spring(0.5, 0.0, m1, m2);
+  createMass(m1);
+  createMass(m2);
+  loadLineGeometryToGPU(s1);
+  
+  //renders a mass, takes in a mass object
+  masses.push_back(m1);
+  masses.push_back(m2);
+  springs.push_back(s1);
+  float t = 100;
   float dt = 0.01;
 
   while (glfwGetKey(window, GLFW_KEY_ESCAPE) != GLFW_PRESS &&
          !glfwWindowShouldClose(window)) {
 
-    t += dt;
-    //solveMassSpring(t);
-
+		solveMassSpring(t);
+		t -= dt;
+		
     displayFunc();
     moveCamera();
 
