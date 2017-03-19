@@ -17,7 +17,7 @@
 
 class Spring {
 public:
-	explicit Spring();
+	Spring();
 	~Spring();
 	
 //structure for the spring

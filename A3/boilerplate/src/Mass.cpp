@@ -18,8 +18,8 @@ void Mass::semiEuler() {
 	this->position = this->position + this->velocity;
 }
 
-float Mass::resolveForce(float dT){
-	return 0;
+void Mass::resolveForce(float dT){
+	this->force = this->force + (this->mass * Vec3f(0.0, 9.81/10, 0.0));
 }
 
 
