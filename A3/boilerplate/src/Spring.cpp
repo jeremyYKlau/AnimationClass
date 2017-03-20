@@ -4,11 +4,11 @@ Spring::Spring() {
 
 }
 
-Spring::Spring(float s, float d, Mass &a, Mass &b){
+Spring::Spring(float s, float d, Mass *a, Mass *b){
 	this->stiffness = s;
 	this->damping = d;
-	this->a = &a;
-	this->b = &b;
+	this->a = a;
+	this->b = b;
 }
 
 Spring::~Spring() {}

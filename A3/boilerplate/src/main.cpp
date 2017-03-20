@@ -122,6 +122,8 @@ std::vector<Spring> springs;
 
 Vec3f totalSpringForce;
 
+static int mode = 0;
+
 //should be correct but some questions about it
 void semiEuler(Mass& m, float dt) {
 	m.velocity = m.velocity + ((m.force/m.mass))*dt;
@@ -193,10 +195,6 @@ void drawQuad(Vec3f pos1, Vec3f pos2, Vec3f pos3, Vec3f pos4) {
                GL_STATIC_DRAW);   // Usage pattern of GPU buffer
 }
 
-void createMass(Mass a) {
-  masses.push_back(a);
-}
-
 //takes a mass and draws it's position
 void drawMass(std::vector<Mass> ma) {
   std::vector<Vec3f> pos;
@@ -210,19 +208,12 @@ void drawMass(std::vector<Mass> ma) {
                GL_STATIC_DRAW);   // Usage pattern of GPU buffer
 }
 
-//createSpring simply loads spring into a vector of spring objects
-void createSpring(Spring s) {
-  springs.push_back(s);
-}
-
 //drawSpring takes in a spring and draws all the lines
 void drawSpring(std::vector<Spring> sp) {
   std::vector<Vec3f> verts;
   for (unsigned int s = 0; s < sp.size(); s++){
     verts.push_back(sp[s].a->position);
-    cout << "spring mass 1: " << sp[s].a->position.y() << endl;
     verts.push_back(sp[s].b->position); 
-    cout << "spring mass 2: " << sp[s].b->position.y() << endl;
   } 
 
   glBindBuffer(GL_ARRAY_BUFFER, line_vertBufferID);
@@ -260,7 +251,7 @@ void setupVAO() {
   glBindVertexArray(0); // reset to default
 }
 
-//spring doesn't update mass positions but mass on its own is fine
+//spring doesn't update mass positions springs point to but mass on its own is fine
 void update(std::vector<Mass> ma, std::vector<Spring> &sp, float dt) {
 	drawMass(ma);
 	drawSpring(sp);
@@ -392,39 +383,45 @@ int main(int argc, char **argv) {
 
   init(); // our own initialize stuff func
   
+  //for the spring mass
   //initialize the masses and springs with values
   Mass m1 = Mass(Vec3f(0, 1, 0), Vec3f(0, 1, 0), Vec3f(0, 1, 0), 1);
   Mass m2 = Mass(Vec3f(0, 1, 0), Vec3f(0, -1, 0), Vec3f(0, 1, 0), 1);;
-  Spring s1 = Spring(0.5, 0.0, m1, m2);
+
+    
+  //adds the masses and springs into a vector for storage
+  masses.push_back(m1);
+  masses.push_back(m2);
+  
+  Spring s1 = Spring(0.5, 0.0, &masses[0], &masses[1]);
+  springs.push_back(s1);
   
   /*
-  initializing the pendulum masses and springs
+  //initializing the pendulum masses and springs
   Mass m1 = Mass(Vec3f(0, 1, 0), Vec3f(0, 1, 0), Vec3f(0, 1, 0), 1);
-  Mass m2 = Mass(Vec3f(0, 1, 0), Vec3f(0.5, 1, 0), Vec3f(0, 1, 0), 1);
-  Mass m3 = Mass(Vec3f(0, 1, 0), Vec3f(1, 1, 0), Vec3f(0, 1, 0), 1);
-  Mass m4 = Mass(Vec3f(0, 1, 0), Vec3f(1.5, 1, 0), Vec3f(0, 1, 0), 1);
+  Mass m2 = Mass(Vec3f(0, 1, 0), Vec3f(0.5, 0.9, 0), Vec3f(0, 1, 0), 1);
+  Mass m3 = Mass(Vec3f(0, 1, 0), Vec3f(1, 0.8, 0), Vec3f(0, 1, 0), 1);
+  Mass m4 = Mass(Vec3f(0, 1, 0), Vec3f(1.5, 0.7, 0), Vec3f(0, 1, 0), 1);
   Mass m5 = Mass(Vec3f(0, 1, 0), Vec3f(2, 1, 0), Vec3f(0, 1, 0), 1);
-  Spring s1 = Spring(0.5, 0.0, m1, m2);
-  Spring s2 = Spring(0.5, 0.0, m2, m3);
-  Spring s3 = Spring(0.5, 0.0, m3, m4);
-  Spring s4 = Spring(0.5, 0.0, m4, m5);
+
+  masses.push_back(m1);
+  masses.push_back(m2);
+  masses.push_back(m3);
+  masses.push_back(m4);
+  masses.push_back(m5);
+  
+  Spring s1 = Spring(0.5, 0.0, &masses[0], &masses[1]);
+  Spring s2 = Spring(0.5, 0.0, &masses[1], &masses[2]);
+  Spring s3 = Spring(0.5, 0.0, &masses[2], &masses[3]);
+  Spring s4 = Spring(0.5, 0.0, &masses[3], &masses[4]);
    
-  createMass(m1);
-  createMass(m2);
-  createMass(m3);
-  createMass(m4);
-  createMass(m5);
-  createSpring(s1);
-  createSpring(s2);
-  createSpring(s3);
-  createSpring(s4);
+
+  springs.push_back(s1);
+  springs.push_back(s2);
+  springs.push_back(s3);
+  springs.push_back(s4);
   */
-  
-  //adds the masses and springs into a vector for storage
-  createMass(m1);
-  createMass(m2);
-  createSpring(s1);
-  
+
   //float t = 1000;
   float dt = 0.001;
  

@@ -26,7 +26,7 @@ public:
 	float stiffness; //k
 	float damping; //-b*v
 
-	Spring(float s, float d, Mass &a, Mass &b);
+	Spring(float s, float d, Mass *a, Mass *b);
 
 	Vec3f springForce();
 	Vec3f applyForce();
