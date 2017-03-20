@@ -116,32 +116,28 @@ void reloadColorUniform(float r, float g, float b);
 std::string GL_ERROR();
 int main(int, char **);
 
-//global storage of points for creating the initial mass placements not used as of right now
-std::vector<Vec3f> massPos;
-
 //global storage of all masses and springs
 std::vector<Mass> masses;
 std::vector<Spring> springs;
 
-std::vector<Mass> tempMasses;
-std::vector<Spring> tempSprings;
 Vec3f totalSpringForce;
 
 //should be correct but some questions about it
-void semiEuler(Mass m) {
-	m.velocity = m.velocity + (m.mass*m.force);
-	m.position = m.position + m.velocity;
+void semiEuler(Mass& m, float dt) {
+	m.velocity = m.velocity + ((m.force/m.mass))*dt;
+	m.position = m.position + (m.velocity)*dt;
 }
 
 void solveMassSpring(float dt){
+	Vec3f sForce;
 	for(unsigned int s = 0; s < springs.size(); s++){
-		totalSpringForce.x() =+ springs[s].springForce().x();
-		totalSpringForce.y() =+ springs[s].springForce().y();
-		totalSpringForce.z() =+ springs[s].springForce().z();
+		sForce.x() =+ springs[s].springForce().x();
+		sForce.y() =+ springs[s].springForce().y();
+		sForce.z() =+ springs[s].springForce().z();
 	}
-	for(unsigned int m = 0; m < masses.size(); m++){
+	for(unsigned int m = 1; m < masses.size(); m++){
 		masses[m].resolveForce(dt);
-		semiEuler(masses[m]);
+		semiEuler(masses[m], dt);
 	}
 }                                                                                                                                   
 
@@ -149,7 +145,7 @@ void solveMassSpring(float dt){
 
 void displayFunc() {
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
+  glPointSize(20);
   // Use our shader
   glUseProgram(basicProgramID);
 
@@ -165,7 +161,7 @@ void displayFunc() {
   //glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
   // Draw masses as single points for now
-  glDrawArrays(GL_POINTS, 0, 2);
+  glDrawArrays(GL_POINTS, 0, masses.size());
   // ==== DRAW LINE ===== //
   MVP = P * V * line_M;
   reloadMVPUniform();
@@ -176,23 +172,24 @@ void displayFunc() {
   // and attribute config of buffers
   glBindVertexArray(line_vaoID);
   // Draw lines
-  glDrawArrays(GL_LINES, 0, 2);
+  glDrawArrays(GL_LINES, 0, springs.size()*2);
   
 }
 
-void loadQuadGeometryToGPU() {
+//for jello cube and cloth
+void drawQuad(Vec3f pos1, Vec3f pos2, Vec3f pos3, Vec3f pos4) {
   // Just basic layout of floats, for a quad
-  // 3 floats per vertex, 4 vertices
-  std::vector<Vec3f> verts;
-  verts.push_back(Vec3f(-0.5, -0.5, 0));
-  verts.push_back(Vec3f(-0.5, 1, 0));
-  verts.push_back(Vec3f(0, -0.5, 0));
-  verts.push_back(Vec3f(0, 1, 0));
-
+  // 4 vertices from mass positions
+  std::vector<Vec3f> vertice;
+  vertice.push_back(pos1);
+  vertice.push_back(pos2);
+  vertice.push_back(pos3);
+  vertice.push_back(pos4);
+  
   glBindBuffer(GL_ARRAY_BUFFER, vertBufferID);
   glBufferData(GL_ARRAY_BUFFER,
                sizeof(Vec3f) * 4, // byte size of Vec3f, 4 of them
-               verts.data(),      // pointer (Vec3f*) to contents of verts
+               vertice.data(),      // pointer (Vec3f*) to contents of verts
                GL_STATIC_DRAW);   // Usage pattern of GPU buffer
 }
 
@@ -200,14 +197,16 @@ void createMass(Mass a) {
   masses.push_back(a);
 }
 
-void drawMass(Mass a) {
+//takes a mass and draws it's position
+void drawMass(std::vector<Mass> ma) {
   std::vector<Vec3f> pos;
-  pos.push_back(a.position);
-  tempMasses.push_back(a);
+  for (unsigned int m = 0; m < ma.size(); m++){
+	pos.push_back(ma[m].position);  
+  }
   glBindBuffer(GL_ARRAY_BUFFER, vertBufferID);
   glBufferData(GL_ARRAY_BUFFER,
-               sizeof(Vec3f) * 2, // byte size of Vec3f, 4 of them
-               massPos.data(),      // pointer (Vec3f*) to contents of verts
+               sizeof(Vec3f) * ma.size(), // byte size of Vec3f, 4 of them
+               pos.data(),      // pointer (Vec3f*) to contents of verts
                GL_STATIC_DRAW);   // Usage pattern of GPU buffer
 }
 
@@ -216,16 +215,19 @@ void createSpring(Spring s) {
   springs.push_back(s);
 }
 
-//drawSpring takes in possibly a list of springs and draws all the lines
-void drawSpring(Spring s) {
+//drawSpring takes in a spring and draws all the lines
+void drawSpring(std::vector<Spring> sp) {
   std::vector<Vec3f> verts;
-  tempSprings.push_back(s);
-  verts.push_back(s.a->position);
-  verts.push_back(s.b->position);
+  for (unsigned int s = 0; s < sp.size(); s++){
+    verts.push_back(sp[s].a->position);
+    cout << "spring mass 1: " << sp[s].a->position.y() << endl;
+    verts.push_back(sp[s].b->position); 
+    cout << "spring mass 2: " << sp[s].b->position.y() << endl;
+  } 
 
   glBindBuffer(GL_ARRAY_BUFFER, line_vertBufferID);
   glBufferData(GL_ARRAY_BUFFER,
-               sizeof(Vec3f) * 2, // byte size of Vec3f, 4 of them
+               sizeof(Vec3f) * (sp.size()*2), // byte size of Vec3f, 4 of them
                verts.data(),      // pointer (Vec3f*) to contents of verts
                GL_STATIC_DRAW);   // Usage pattern of GPU buffer
 }
@@ -258,16 +260,10 @@ void setupVAO() {
   glBindVertexArray(0); // reset to default
 }
 
-//function doesn't work different problems based off conditional used in forloop
-void update(std::vector<Mass> ma, std::vector<Spring> sp) {
-	for (int i=-1; i = ma.size(); i++){
-		drawMass(ma[i]);
-		cout << "updating " << i << endl;
-	}
-	for (int j=-1; j = sp.size(); j++){
-		drawSpring(sp[j]);
-		cout << "spring updating " << j << endl;
-	}
+//spring doesn't update mass positions but mass on its own is fine
+void update(std::vector<Mass> ma, std::vector<Spring> &sp, float dt) {
+	drawMass(ma);
+	drawSpring(sp);
 }
 
 void reloadProjectionMatrix() {
@@ -345,18 +341,8 @@ void init() {
 
   camera = Camera(Vec3f{0, 0, 5}, Vec3f{0, 0, -1}, Vec3f{0, 1, 0});
 
-  // SETUP SHADERS, BUFFERS, VAOs
-  Mass m1 = Mass(Vec3f(0, 1, 0), Vec3f(0, 1, 0), Vec3f(0, 1, 0), 1);
-  Mass m2 = Mass(Vec3f(0, 1, 0), Vec3f(0, -1, 0), Vec3f(0, 1, 0), 1);;
-  Spring s1 = Spring(1.0, 0.5, m1, m2);
-  
   generateIDs();
   setupVAO();
-  
-  //initialize the 2 masses and the spring
-  createMass(m1);
-  createMass(m2);
-  createSpring(s1);
   
   loadModelViewMatrix();
   reloadProjectionMatrix();
@@ -406,33 +392,48 @@ int main(int argc, char **argv) {
 
   init(); // our own initialize stuff func
   
-  /*Mass m1 = Mass(Vec3f(0, 1, 0), Vec3f(0, 1, 0), Vec3f(0, 1, 0), 1);
+  //initialize the masses and springs with values
+  Mass m1 = Mass(Vec3f(0, 1, 0), Vec3f(0, 1, 0), Vec3f(0, 1, 0), 1);
   Mass m2 = Mass(Vec3f(0, 1, 0), Vec3f(0, -1, 0), Vec3f(0, 1, 0), 1);;
   Spring s1 = Spring(0.5, 0.0, m1, m2);
+  
+  /*
+  initializing the pendulum masses and springs
+  Mass m1 = Mass(Vec3f(0, 1, 0), Vec3f(0, 1, 0), Vec3f(0, 1, 0), 1);
+  Mass m2 = Mass(Vec3f(0, 1, 0), Vec3f(0.5, 1, 0), Vec3f(0, 1, 0), 1);
+  Mass m3 = Mass(Vec3f(0, 1, 0), Vec3f(1, 1, 0), Vec3f(0, 1, 0), 1);
+  Mass m4 = Mass(Vec3f(0, 1, 0), Vec3f(1.5, 1, 0), Vec3f(0, 1, 0), 1);
+  Mass m5 = Mass(Vec3f(0, 1, 0), Vec3f(2, 1, 0), Vec3f(0, 1, 0), 1);
+  Spring s1 = Spring(0.5, 0.0, m1, m2);
+  Spring s2 = Spring(0.5, 0.0, m2, m3);
+  Spring s3 = Spring(0.5, 0.0, m3, m4);
+  Spring s4 = Spring(0.5, 0.0, m4, m5);
+   
   createMass(m1);
   createMass(m2);
-  loadLineGeometryToGPU(s1);
-  
-  //renders a mass, takes in a mass object
-  masses.push_back(m1);
-  masses.push_back(m2);
-  springs.push_back(s1);
+  createMass(m3);
+  createMass(m4);
+  createMass(m5);
+  createSpring(s1);
+  createSpring(s2);
+  createSpring(s3);
+  createSpring(s4);
   */
   
-  float t = 100;
-  float dt = 0.01;
+  //adds the masses and springs into a vector for storage
+  createMass(m1);
+  createMass(m2);
+  createSpring(s1);
+  
+  //float t = 1000;
+  float dt = 0.001;
  
   while (glfwGetKey(window, GLFW_KEY_ESCAPE) != GLFW_PRESS &&
          !glfwWindowShouldClose(window)) {
 
-	while (t >=0){
-		glClearColor(0.0f, 0.0f, 0.0f, 1.0f );
-		glClear(GL_ARRAY_BUFFER);
-		
-		solveMassSpring(t);
-		t -= dt;
-		update(masses, springs);
-	}
+	solveMassSpring(dt);
+	update(masses, springs, dt);
+
     displayFunc();
     moveCamera();
 

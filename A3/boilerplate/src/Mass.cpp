@@ -13,12 +13,8 @@ Mass::Mass(Vec3f f, Vec3f pos, Vec3f v, float m){
 
 Mass::~Mass() {}
 
-void Mass::semiEuler() {
-	this->velocity = this->velocity + (this->mass*this->force);
-	this->position = this->position + this->velocity;
-}
-
 void Mass::resolveForce(float dT){
+	prevVelocity = this->velocity;
 	this->force = this->force + (this->mass * Vec3f(0.0, 9.81/10, 0.0));
 }
 

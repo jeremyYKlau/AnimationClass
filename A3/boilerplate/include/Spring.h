@@ -27,8 +27,8 @@ public:
 	float damping; //-b*v
 
 	Spring(float s, float d, Mass &a, Mass &b);
-	
+
 	Vec3f springForce();
-	float applyForce();
+	Vec3f applyForce();
 };
 #endif // Spring_H

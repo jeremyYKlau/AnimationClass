@@ -21,12 +21,13 @@ public:
 	Vec3f velocity;
 	float mass;
 	
+	Vec3f prevVelocity;
+	
 	Mass();
 	~Mass();
 
 	Mass(Vec3f f, Vec3f pos, Vec3f v, float m);
 
-	void semiEuler();
 	void resolveForce(float dT);
 };
 #endif // Mass_H

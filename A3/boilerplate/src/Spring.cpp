@@ -20,6 +20,6 @@ Vec3f Spring::springForce(){
 	return fs;
 }
 
-float Spring::applyForce(){
-	return 0;
+Vec3f Spring::applyForce(){
+	
 }
