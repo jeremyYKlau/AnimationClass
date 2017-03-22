@@ -27,7 +27,9 @@ public:
 	~Mass();
 
 	Mass(Vec3f f, Vec3f pos, Vec3f v, float m);
-
+	
+	void semiEuler(float dt);
+	void dampingForce(float d);
 	void resolveForce(float dT);
 };
 #endif // Mass_H

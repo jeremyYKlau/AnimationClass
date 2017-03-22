@@ -124,6 +124,8 @@ Vec3f totalSpringForce;
 
 static int mode = 0;
 
+//==================== FUNCTION DEFINITIONS ====================//
+
 //should be correct but some questions about it
 void semiEuler(Mass& m, float dt) {
 	m.velocity = m.velocity + ((m.force/m.mass))*dt;
@@ -131,19 +133,33 @@ void semiEuler(Mass& m, float dt) {
 }
 
 void solveMassSpring(float dt){
-	Vec3f sForce;
 	for(unsigned int s = 0; s < springs.size(); s++){
-		sForce.x() =+ springs[s].springForce().x();
-		sForce.y() =+ springs[s].springForce().y();
-		sForce.z() =+ springs[s].springForce().z();
+		springs[s].applyForce(springs[s].springForce());
 	}
 	for(unsigned int m = 1; m < masses.size(); m++){
 		masses[m].resolveForce(dt);
-		semiEuler(masses[m], dt);
+		masses[m].dampingForce(10);
+		masses[m].force = Vec3f(0,0,0);
 	}
 }                                                                                                                                   
 
-//==================== FUNCTION DEFINITIONS ====================//
+/*
+//for cloth and cube
+void distanceFunction(std::vector<Mass> m){
+	for (unsigned int i = 0; i<m.size(); i++){
+		
+}*/
+
+//to create the cloth using a double for loop
+void createCloth() {
+	for (unsigned int i = 0; i<5; i++){
+		for (unsigned int j = 0; i<5; j++){
+			Mass m = Mass(Vec3f(0, 0, 0), Vec3f(i, j, 0), Vec3f(0, 1, 0), 1);
+			masses.push_back(m);
+		}
+	}
+	cout << "number of masses " << masses.size() << endl;
+}
 
 void displayFunc() {
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -382,27 +398,27 @@ int main(int argc, char **argv) {
   std::cout << GL_ERROR() << std::endl;
 
   init(); // our own initialize stuff func
-  
+     /* 
   //for the spring mass
-  //initialize the masses and springs with values
-  Mass m1 = Mass(Vec3f(0, 1, 0), Vec3f(0, 1, 0), Vec3f(0, 1, 0), 1);
-  Mass m2 = Mass(Vec3f(0, 1, 0), Vec3f(0, -1, 0), Vec3f(0, 1, 0), 1);;
+//initialize the masses and springs with values
+  Mass m1 = Mass(Vec3f(0, 0, 0), Vec3f(0, 1, 0), Vec3f(0, 1, 0), 1);
+  Mass m2 = Mass(Vec3f(0, 0, 0), Vec3f(0, -1, 0), Vec3f(0, 1, 0), 1);;
 
     
   //adds the masses and springs into a vector for storage
   masses.push_back(m1);
   masses.push_back(m2);
   
-  Spring s1 = Spring(0.5, 0.0, &masses[0], &masses[1]);
+  Spring s1 = Spring(50, 5, &masses[0], &masses[1]);
   springs.push_back(s1);
-  
-  /*
+
+    */
   //initializing the pendulum masses and springs
   Mass m1 = Mass(Vec3f(0, 1, 0), Vec3f(0, 1, 0), Vec3f(0, 1, 0), 1);
-  Mass m2 = Mass(Vec3f(0, 1, 0), Vec3f(0.5, 0.9, 0), Vec3f(0, 1, 0), 1);
-  Mass m3 = Mass(Vec3f(0, 1, 0), Vec3f(1, 0.8, 0), Vec3f(0, 1, 0), 1);
-  Mass m4 = Mass(Vec3f(0, 1, 0), Vec3f(1.5, 0.7, 0), Vec3f(0, 1, 0), 1);
-  Mass m5 = Mass(Vec3f(0, 1, 0), Vec3f(2, 1, 0), Vec3f(0, 1, 0), 1);
+  Mass m2 = Mass(Vec3f(0, 1, 0), Vec3f(0.3, 0.9, 0), Vec3f(0, 1, 0), 1);
+  Mass m3 = Mass(Vec3f(0, 1, 0), Vec3f(0.6, 0.8, 0), Vec3f(0, 1, 0), 1);
+  Mass m4 = Mass(Vec3f(0, 1, 0), Vec3f(0.9, 0.7, 0), Vec3f(0, 1, 0), 1);
+  Mass m5 = Mass(Vec3f(0, 1, 0), Vec3f(1.2, 1, 0), Vec3f(0, 1, 0), 1);
 
   masses.push_back(m1);
   masses.push_back(m2);
@@ -410,20 +426,20 @@ int main(int argc, char **argv) {
   masses.push_back(m4);
   masses.push_back(m5);
   
-  Spring s1 = Spring(0.5, 0.0, &masses[0], &masses[1]);
-  Spring s2 = Spring(0.5, 0.0, &masses[1], &masses[2]);
-  Spring s3 = Spring(0.5, 0.0, &masses[2], &masses[3]);
-  Spring s4 = Spring(0.5, 0.0, &masses[3], &masses[4]);
+  Spring s1 = Spring(50, 0.0, &masses[0], &masses[1]);
+  Spring s2 = Spring(50, 0.0, &masses[1], &masses[2]);
+  Spring s3 = Spring(50, 0.0, &masses[2], &masses[3]);
+  Spring s4 = Spring(50, 0.0, &masses[3], &masses[4]);
    
 
   springs.push_back(s1);
   springs.push_back(s2);
   springs.push_back(s3);
   springs.push_back(s4);
-  */
+
 
   //float t = 1000;
-  float dt = 0.001;
+  float dt = 0.01;
  
   while (glfwGetKey(window, GLFW_KEY_ESCAPE) != GLFW_PRESS &&
          !glfwWindowShouldClose(window)) {

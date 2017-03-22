@@ -13,9 +13,19 @@ Mass::Mass(Vec3f f, Vec3f pos, Vec3f v, float m){
 
 Mass::~Mass() {}
 
+void Mass::semiEuler(float dt) {
+	this->velocity = this->velocity + ((this->force/this->mass))*dt;
+	this->position = this->position + (this->velocity)*dt;
+}
+void Mass::dampingForce(float d){
+	this->force += -d*this->velocity;
+}
+
 void Mass::resolveForce(float dT){
-	prevVelocity = this->velocity;
-	this->force = this->force + (this->mass * Vec3f(0.0, 9.81/10, 0.0));
+	Vec3f accel = (this->force / this->mass);
+	accel += Vec3f(0, -9.81, 0);
+	this->force += mass*accel;
+	semiEuler(dT);
 }
 
 

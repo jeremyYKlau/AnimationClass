@@ -29,6 +29,6 @@ public:
 	Spring(float s, float d, Mass *a, Mass *b);
 
 	Vec3f springForce();
-	Vec3f applyForce();
+	void applyForce(Vec3f springF);
 };
 #endif // Spring_H

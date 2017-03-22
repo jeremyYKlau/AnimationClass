@@ -14,12 +14,13 @@ Spring::Spring(float s, float d, Mass *a, Mass *b){
 Spring::~Spring() {}
 
 Vec3f Spring::springForce(){
-	Vec3f length = this->a->position - this->b->position;
-	float normalizedLength = sqrt((length.x()*length.x())+(length.y()*length.y())+(length.z()*length.z())); 
-	Vec3f fs = (-1*this->stiffness)*(normalizedLength)*(length/normalizedLength);
+	Vec3f distance = this->a->position - this->b->position;
+	float normalizedLength = distance.length();
+	Vec3f fs = (-1*this->stiffness)*(normalizedLength - (normalizedLength/2))*(distance/normalizedLength);
 	return fs;
 }
 
-Vec3f Spring::applyForce(){
-	
+void Spring::applyForce(Vec3f springF){
+	this->a->force += springF;
+	this->b->force -= springF;
 }
