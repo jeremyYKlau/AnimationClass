@@ -122,7 +122,7 @@ std::vector<Spring> springs;
 
 Vec3f totalSpringForce;
 
-static int mode = 0;
+//static int mode = 0;
 
 //==================== FUNCTION DEFINITIONS ====================//
 
@@ -134,36 +134,75 @@ void semiEuler(Mass& m, float dt) {
 
 void solveMassSpring(float dt){
 	for(unsigned int s = 0; s < springs.size(); s++){
+		cout << "Spring: " << s << endl;
 		springs[s].applyForce(springs[s].springForce());
 	}
 	for(unsigned int m = 1; m < masses.size(); m++){
-		masses[m].resolveForce(dt);
-		masses[m].dampingForce(10);
+		masses[m].resolveForce(dt, springs[m].damping);
 		masses[m].force = Vec3f(0,0,0);
 	}
 }                                                                                                                                   
 
-/*
-//for cloth and cube
-void distanceFunction(std::vector<Mass> m){
-	for (unsigned int i = 0; i<m.size(); i++){
-		
-}*/
-
 //to create the cloth using a double for loop
 void createCloth() {
-	for (unsigned int i = 0; i<5; i++){
-		for (unsigned int j = 0; i<5; j++){
-			Mass m = Mass(Vec3f(0, 0, 0), Vec3f(i, j, 0), Vec3f(0, 1, 0), 1);
+	for (unsigned int i = 5; i>0; i--){
+		for (unsigned int j = 5; j>0; j--){
+			Mass m = Mass(Vec3f(0, 0, 0), Vec3f(i, j, 0), Vec3f(0, 0, 0), 0.5);
 			masses.push_back(m);
 		}
 	}
 	cout << "number of masses " << masses.size() << endl;
 }
 
+//creates the masses for the cube including the middle mass at the end of the list
+void createCube() {
+	for (unsigned int i = 0; i<=2; i++){
+		for (unsigned int j = 0; j<=2; j++){
+			for (unsigned int k = 0; k<=2; k++) {
+				Mass m = Mass(Vec3f(0, 0, 0), Vec3f(i, j, k), Vec3f(0, 0, 0), 1);
+				masses.push_back(m);
+			}
+		}
+	}
+	cout << "number of masses " << masses.size() << endl;
+	Mass centerM = Mass(Vec3f(0,0,0), Vec3f(1,1,1), Vec3f(0,0,0), 0.5);
+	masses.push_back(centerM);
+}
+
+//for cloth springs based off distance
+void distanceCloth(std::vector<Mass> m){
+	for (unsigned int i = 0; i<=m.size(); i++){
+		for (unsigned int j = 0; j<=m.size(); j++){
+			float distance = (m[i].position-m[j].position).length();
+			//sqrt2*1.05 to make sure it still draws diagonal springs
+			if ((distance <= (sqrt(2)))&&(distance>0.1)){
+				Spring s = Spring(5, 0.5, &masses[i], &masses[j]);
+				springs.push_back(s);
+				cout << "Spring mass positions A " << s.a->position << " B " << s.b->position << endl;
+			}
+		}
+	}
+}
+
+//for cube springs
+void distanceCube(std::vector<Mass> m) {
+	for (unsigned int i = 0; i<m.size(); i++){
+		for (unsigned int j = 0; j<m.size(); j++){
+			float distance = (m[i].position-m[j].position).length();
+			if ((distance <= (sqrt(3)))&&(distance>0.1)){
+				Spring s = Spring(5, 0.2, &masses[i], &masses[j]);
+				//this is a hard coded thing bad, creates a spring from all points to the center point named spring sC
+				Spring sC = Spring(5, 0.2, &masses[i], &masses[masses.size()-1]);
+				springs.push_back(s);
+				springs.push_back(sC);
+			}
+		}
+	}
+}
+
 void displayFunc() {
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-  glPointSize(20);
+  glPointSize(15);
   // Use our shader
   glUseProgram(basicProgramID);
 
@@ -271,6 +310,46 @@ void setupVAO() {
 void update(std::vector<Mass> ma, std::vector<Spring> &sp, float dt) {
 	drawMass(ma);
 	drawSpring(sp);
+}
+
+void createSpringMass() {
+	  //for the spring mass initialize the masses and springs with values
+  Mass m1 = Mass(Vec3f(0, 0, 0), Vec3f(0, 1, 0), Vec3f(0, 1, 0), 0.5);
+  Mass m2 = Mass(Vec3f(0, 0, 0), Vec3f(0, -1, 0), Vec3f(0, 1, 0), 1);
+
+    
+  //adds the masses and springs into a vector for storage
+  masses.push_back(m1);
+  masses.push_back(m2);
+  
+  Spring s1 = Spring(5, 0.2, &masses[0], &masses[1]);
+  springs.push_back(s1);
+}
+
+void createPendulum(){
+	  //initializing the pendulum masses and springs
+  Mass m1 = Mass(Vec3f(0, 0, 0), Vec3f(0, 1, 0), Vec3f(0, 0, 0), 1);
+  Mass m2 = Mass(Vec3f(0, 0, 0), Vec3f(0.3, 0.9, 0), Vec3f(0, 0, 0), 1);
+  Mass m3 = Mass(Vec3f(0, 0, 0), Vec3f(0.6, 0.8, 0), Vec3f(0, 0, 0), 1);
+  Mass m4 = Mass(Vec3f(0, 0, 0), Vec3f(0.9, 0.7, 0), Vec3f(0, 0, 0), 1);
+  Mass m5 = Mass(Vec3f(0, 0, 0), Vec3f(1.2, 1, 0), Vec3f(0, 0, 0), 1);
+
+  masses.push_back(m1);
+  masses.push_back(m2);
+  masses.push_back(m3);
+  masses.push_back(m4);
+  masses.push_back(m5);
+  
+  Spring s1 = Spring(50, 0.5, &masses[0], &masses[1]);
+  Spring s2 = Spring(50, 0.5, &masses[1], &masses[2]);
+  Spring s3 = Spring(50, 0.5, &masses[2], &masses[3]);
+  Spring s4 = Spring(50, 0.5, &masses[3], &masses[4]);
+   
+
+  springs.push_back(s1);
+  springs.push_back(s2);
+  springs.push_back(s3);
+  springs.push_back(s4);
 }
 
 void reloadProjectionMatrix() {
@@ -398,55 +477,28 @@ int main(int argc, char **argv) {
   std::cout << GL_ERROR() << std::endl;
 
   init(); // our own initialize stuff func
-     /* 
-  //for the spring mass
-//initialize the masses and springs with values
-  Mass m1 = Mass(Vec3f(0, 0, 0), Vec3f(0, 1, 0), Vec3f(0, 1, 0), 1);
-  Mass m2 = Mass(Vec3f(0, 0, 0), Vec3f(0, -1, 0), Vec3f(0, 1, 0), 1);;
 
-    
-  //adds the masses and springs into a vector for storage
-  masses.push_back(m1);
-  masses.push_back(m2);
+   //float t = 1000;
+  float dt = 0.001;
   
-  Spring s1 = Spring(50, 5, &masses[0], &masses[1]);
-  springs.push_back(s1);
-
-    */
-  //initializing the pendulum masses and springs
-  Mass m1 = Mass(Vec3f(0, 1, 0), Vec3f(0, 1, 0), Vec3f(0, 1, 0), 1);
-  Mass m2 = Mass(Vec3f(0, 1, 0), Vec3f(0.3, 0.9, 0), Vec3f(0, 1, 0), 1);
-  Mass m3 = Mass(Vec3f(0, 1, 0), Vec3f(0.6, 0.8, 0), Vec3f(0, 1, 0), 1);
-  Mass m4 = Mass(Vec3f(0, 1, 0), Vec3f(0.9, 0.7, 0), Vec3f(0, 1, 0), 1);
-  Mass m5 = Mass(Vec3f(0, 1, 0), Vec3f(1.2, 1, 0), Vec3f(0, 1, 0), 1);
-
-  masses.push_back(m1);
-  masses.push_back(m2);
-  masses.push_back(m3);
-  masses.push_back(m4);
-  masses.push_back(m5);
+  //creates the spring with one mass
+  createSpringMass();
   
-  Spring s1 = Spring(50, 0.0, &masses[0], &masses[1]);
-  Spring s2 = Spring(50, 0.0, &masses[1], &masses[2]);
-  Spring s3 = Spring(50, 0.0, &masses[2], &masses[3]);
-  Spring s4 = Spring(50, 0.0, &masses[3], &masses[4]);
-   
-
-  springs.push_back(s1);
-  springs.push_back(s2);
-  springs.push_back(s3);
-  springs.push_back(s4);
-
-
-  //float t = 1000;
-  float dt = 0.01;
- 
+  //creates the pendulum of multiple spring masses
+  //createPendulum();
+  
+  //creates the cloth and below the distance algorithm to create the springs for the cloth
+  //createCloth();
+  //distanceCloth(masses);
+  
+  //createCube();
+  //distanceCube(masses);
+  
   while (glfwGetKey(window, GLFW_KEY_ESCAPE) != GLFW_PRESS &&
          !glfwWindowShouldClose(window)) {
 
 	solveMassSpring(dt);
 	update(masses, springs, dt);
-
     displayFunc();
     moveCamera();
 

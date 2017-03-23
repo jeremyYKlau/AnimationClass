@@ -16,6 +16,7 @@ Spring::~Spring() {}
 Vec3f Spring::springForce(){
 	Vec3f distance = this->a->position - this->b->position;
 	float normalizedLength = distance.length();
+	//std::cout << "normalized length " << normalizedLength << std::endl;
 	Vec3f fs = (-1*this->stiffness)*(normalizedLength - (normalizedLength/2))*(distance/normalizedLength);
 	return fs;
 }
