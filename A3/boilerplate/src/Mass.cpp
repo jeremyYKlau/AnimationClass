@@ -16,6 +16,10 @@ Mass::~Mass() {}
 void Mass::semiEuler(float dt) {
 	this->velocity = this->velocity + ((this->force/this->mass))*dt;
 	this->position = this->position + (this->velocity)*dt;
+	if (this->position.y() <= -3){
+		this->position.y() = -3;
+		this->velocity.y() = 0;
+	}
 }
 
 void Mass::resolveForce(float dT, float d){

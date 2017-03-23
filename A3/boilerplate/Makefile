@@ -19,8 +19,7 @@ LIBS = `pkg-config --libs glfw3 gl` -ldl
 SOURCES=$(wildcard $(SRCDIR)/*cpp) 
 OBJECTS=$(addprefix $(OBJDIR)/,$(notdir $(SOURCES:.cpp=.o)))
 
-EXECUTABLE=spring
-
+EXECUTABLE=jellocube
 all: $(SOURCES) $(EXECUTABLE)
 
 $(EXECUTABLE): $(OBJECTS) ./obj/glad.o

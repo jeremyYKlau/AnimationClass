@@ -134,11 +134,11 @@ void semiEuler(Mass& m, float dt) {
 
 void solveMassSpring(float dt){
 	for(unsigned int s = 0; s < springs.size(); s++){
-		cout << "Spring: " << s << endl;
 		springs[s].applyForce(springs[s].springForce());
+		//cout << "springs force " << springs[s].springForce() << endl;
 	}
-	for(unsigned int m = 1; m < masses.size(); m++){
-		masses[m].resolveForce(dt, springs[m-1].damping);
+	for(unsigned int m = 0; m < masses.size(); m++){
+		masses[m].resolveForce(dt, springs[m].damping);
 		masses[m].force = Vec3f(0,0,0);
 	}
 }                                                                                                                                   
@@ -147,7 +147,7 @@ void solveMassSpring(float dt){
 void createCloth() {
 	for (unsigned int i = 5; i>0; i--){
 		for (unsigned int j = 5; j>0; j--){
-			Mass m = Mass(Vec3f(0, 0, 0), Vec3f(i, j, 0), Vec3f(0, 0, 0), 0.5);
+			Mass m = Mass(Vec3f(0, 0, 0), Vec3f(i, j, 0), Vec3f(0, 0, 0), 1);
 			masses.push_back(m);
 		}
 	}
@@ -159,13 +159,12 @@ void createCube() {
 	for (unsigned int i = 0; i<=2; i++){
 		for (unsigned int j = 0; j<=2; j++){
 			for (unsigned int k = 0; k<=2; k++) {
-				Mass m = Mass(Vec3f(0, 0, 0), Vec3f(i, j, k), Vec3f(0, 0, 0), 1);
+				Mass m = Mass(Vec3f(0, 0, 0), Vec3f(i, j, k), Vec3f(0, 0, 0), 0.3);
 				masses.push_back(m);
 			}
 		}
 	}
-	cout << "number of masses " << masses.size() << endl;
-	Mass centerM = Mass(Vec3f(0,0,0), Vec3f(1,1,1), Vec3f(0,0,0), 0.5);
+	Mass centerM = Mass(Vec3f(0,1,0), Vec3f(1,1,1), Vec3f(0,1,0), 0.5);
 	masses.push_back(centerM);
 }
 
@@ -176,9 +175,15 @@ void distanceCloth(std::vector<Mass> m){
 			float distance = (m[i].position-m[j].position).length();
 			//sqrt2*1.05 to make sure it still draws diagonal springs
 			if ((distance <= (sqrt(2)))&&(distance>0.1)){
-				Spring s = Spring(5, 0.5, &masses[i], &masses[j]);
-				springs.push_back(s);
-				cout << "Spring mass positions A " << s.a->position << " B " << s.b->position << endl;
+				//this if is to create the cross springs that need different coefficients at spring set up
+				if((distance <= (sqrt(2)))&&(distance>1.0)) {
+					Spring s = Spring(5, 0.5, &masses[i], &masses[j]);
+					springs.push_back(s);
+				}
+				else{
+					Spring s = Spring(5, 1, &masses[i], &masses[j]);
+					springs.push_back(s);
+				}
 			}
 		}
 	}
@@ -190,11 +195,19 @@ void distanceCube(std::vector<Mass> m) {
 		for (unsigned int j = 0; j<m.size(); j++){
 			float distance = (m[i].position-m[j].position).length();
 			if ((distance <= (sqrt(3)))&&(distance>0.1)){
-				Spring s = Spring(5, 0.2, &masses[i], &masses[j]);
-				//this is a hard coded thing bad, creates a spring from all points to the center point named spring sC
-				Spring sC = Spring(5, 0.2, &masses[i], &masses[masses.size()-1]);
-				springs.push_back(s);
-				springs.push_back(sC);
+				//same as cloth cross springs need different values
+				if((distance <= (sqrt(3)))&&(distance>1.0)) {
+					Spring s = Spring(1, 1, &masses[i], &masses[j]);
+					springs.push_back(s);
+					//cout << "Intermediate " << s.a->position << " and " << s.b->position << endl;
+				}
+				else{
+					Spring s = Spring(1, 1, &masses[i], &masses[j]);
+					springs.push_back(s);
+					//cout << "Intermediate " << s.a->position << " and " << s.b->position << endl;
+				}
+			Spring sC = Spring(1, 1, &masses[i], &masses[masses.size()-1]);
+			springs.push_back(sC);
 			}
 		}
 	}
@@ -425,7 +438,7 @@ void init() {
   glEnable(GL_DEPTH_TEST);
   glPointSize(50);
 
-  camera = Camera(Vec3f{0, 0, 10}, Vec3f{0, 0, -1}, Vec3f{0, 1, 0});
+  camera = Camera(Vec3f{5, 0, 10}, Vec3f{0, 0, -1}, Vec3f{0, 1, 0});
 
   generateIDs();
   setupVAO();
@@ -482,7 +495,7 @@ int main(int argc, char **argv) {
   float dt = 0.01;
   
   //creates the spring with one mass
-  createSpringMass();
+  //createSpringMass();
   
   //creates the pendulum of multiple spring masses
   //createPendulum();
@@ -491,8 +504,8 @@ int main(int argc, char **argv) {
   //createCloth();
   //distanceCloth(masses);
   
-  //createCube();
-  //distanceCube(masses);
+  createCube();
+  distanceCube(masses);
   
   while (glfwGetKey(window, GLFW_KEY_ESCAPE) != GLFW_PRESS &&
          !glfwWindowShouldClose(window)) {
