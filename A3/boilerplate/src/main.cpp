@@ -138,7 +138,7 @@ void solveMassSpring(float dt){
 		springs[s].applyForce(springs[s].springForce());
 	}
 	for(unsigned int m = 1; m < masses.size(); m++){
-		masses[m].resolveForce(dt, springs[m].damping);
+		masses[m].resolveForce(dt, springs[m-1].damping);
 		masses[m].force = Vec3f(0,0,0);
 	}
 }                                                                                                                                   
@@ -425,7 +425,7 @@ void init() {
   glEnable(GL_DEPTH_TEST);
   glPointSize(50);
 
-  camera = Camera(Vec3f{0, 0, 5}, Vec3f{0, 0, -1}, Vec3f{0, 1, 0});
+  camera = Camera(Vec3f{0, 0, 10}, Vec3f{0, 0, -1}, Vec3f{0, 1, 0});
 
   generateIDs();
   setupVAO();
@@ -479,7 +479,7 @@ int main(int argc, char **argv) {
   init(); // our own initialize stuff func
 
    //float t = 1000;
-  float dt = 0.001;
+  float dt = 0.01;
   
   //creates the spring with one mass
   createSpringMass();
