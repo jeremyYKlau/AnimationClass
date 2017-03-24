@@ -4,16 +4,22 @@ Mass::Mass() {
 
 }
 
-Mass::Mass(Vec3f f, Vec3f pos, Vec3f v, float m){
+Mass::Mass(Vec3f f, Vec3f pos, Vec3f v, float m, bool fix){
 	this->force = f;
 	this->position = pos;
 	this->velocity = v;
 	this->mass = m;
+	this->fixed = fix;
 }
 
 Mass::~Mass() {}
 
 void Mass::semiEuler(float dt) {
+	this->velocity = this->velocity + ((this->force/this->mass))*dt;
+	this->position = this->position + (this->velocity)*dt;
+}
+
+void Mass::semiEulerCube(float dt) {
 	this->velocity = this->velocity + ((this->force/this->mass))*dt;
 	this->position = this->position + (this->velocity)*dt;
 	if (this->position.y() <= -3){
@@ -30,4 +36,11 @@ void Mass::resolveForce(float dT, float d){
 	semiEuler(dT);
 }
 
+void Mass::resolveForceCube(float dT, float d){
+	//Vec3f accel = (this->force / this->mass);
+	this->force += Vec3f(0, -9.81, 0)*mass;
+	//this->force += mass*accel;
+	this->force += (-d*this->velocity);
+	semiEulerCube(dT);
+}
 

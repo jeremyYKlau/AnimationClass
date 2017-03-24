@@ -21,3 +21,28 @@ shift+arrow right	: roll camera right
 
 space bar			: pause/play
 esc					: exit
+
+Extension by Jeremy Lau 
+Spring mass simulation with all 4 parts
+
+First off the cube is a little off the corners seem to act in strange ways sometimes.
+In particular the forward left corner and the back right corner, they fall into the cube.
+Second mode switching now works turns out I can just call the create function on button press.
+To mode switch:
+	1 = Mass spring, just the single moving mass
+	2 = Pendulum with springs, pre set at probably should have used for loop to make 
+		it more generic
+	3 = Cloth, values can be changed by going to switch case for the buttons and 
+		changing the value from 5,5 to something else
+	4 = Jello Cube, values like cloth can be changed in button switch case. 
+		Please don't turn above 5 I think my simulation goes crazy if you do thanks to the constants I made
+
+Side note I added R to reset camera but its choppy don't know why
+
+Complications:
+Some complications included never knowing if it was right because it could just be 
+hard coded values are wrong or the actual formulas are wrong.
+Also float lack of precision caused a large headache as I got 0 cases a lot where the values
+ended up as 0 and divided by them causing errors.
+Also getting started was the hardest thing took around 4 days but everything else just
+went so smoothly after the setting up was done.

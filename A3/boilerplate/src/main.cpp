@@ -120,51 +120,105 @@ int main(int, char **);
 std::vector<Mass> masses;
 std::vector<Spring> springs;
 
-Vec3f totalSpringForce;
-
-//static int mode = 0;
+bool cubemode = false;
+float rest = 2.0;
 
 //==================== FUNCTION DEFINITIONS ====================//
 
-//should be correct but some questions about it
-void semiEuler(Mass& m, float dt) {
-	m.velocity = m.velocity + ((m.force/m.mass))*dt;
-	m.position = m.position + (m.velocity)*dt;
-}
 
-void solveMassSpring(float dt){
+void solveMassSpring(float dt, float xO){
 	for(unsigned int s = 0; s < springs.size(); s++){
-		springs[s].applyForce(springs[s].springForce());
+		springs[s].applyForce(springs[s].springForce(xO));
 		//cout << "springs force " << springs[s].springForce() << endl;
 	}
 	for(unsigned int m = 0; m < masses.size(); m++){
+		if (masses[m].fixed != true){
 		masses[m].resolveForce(dt, springs[m].damping);
 		masses[m].force = Vec3f(0,0,0);
+		}
 	}
-}                                                                                                                                   
+}          
 
+void solveMassSpringCube(float dt, float xO){
+	for(unsigned int s = 0; s < springs.size(); s++){
+		springs[s].applyForce(springs[s].springForce(xO));
+		//cout << "springs force " << springs[s].springForce() << endl;
+	}
+	for(unsigned int m = 0; m < masses.size(); m++){
+		if (masses[m].fixed != true){
+		masses[m].resolveForceCube(dt, springs[m].damping);
+		masses[m].force = Vec3f(0,0,0);
+		}
+	}
+}          
+                                                                                                                         
+void createSpringMass() {
+	  //for the spring mass initialize the masses and springs with values
+  Mass m1 = Mass(Vec3f(0, 0, 0), Vec3f(0, 1, 0), Vec3f(0, 1, 0), 0.5, true);
+  Mass m2 = Mass(Vec3f(0, 0, 0), Vec3f(0, -1, 0), Vec3f(0, 1, 0), 1, false);
+
+    
+  //adds the masses and springs into a vector for storage
+  masses.push_back(m1);
+  masses.push_back(m2);
+  
+  Spring s1 = Spring(5, 0.2, &masses[0], &masses[1]);
+  springs.push_back(s1);
+}
+
+void createPendulum(){
+	  //initializing the pendulum masses and springs
+  Mass m1 = Mass(Vec3f(0, 0, 0), Vec3f(0, 1, 0), Vec3f(0, 0, 0), 1, true);
+  Mass m2 = Mass(Vec3f(0, 0, 0), Vec3f(0.3, 0.9, 0), Vec3f(0, 0, 0), 1, false);
+  Mass m3 = Mass(Vec3f(0, 0, 0), Vec3f(0.6, 0.8, 0), Vec3f(0, 0, 0), 1, false);
+  Mass m4 = Mass(Vec3f(0, 0, 0), Vec3f(0.9, 0.7, 0), Vec3f(0, 0, 0), 1, false);
+  Mass m5 = Mass(Vec3f(0, 0, 0), Vec3f(1.2, 1, 0), Vec3f(0, 0, 0), 1, false);
+
+  masses.push_back(m1);
+  masses.push_back(m2);
+  masses.push_back(m3);
+  masses.push_back(m4);
+  masses.push_back(m5);
+  
+  Spring s1 = Spring(50, 0.5, &masses[0], &masses[1]);
+  Spring s2 = Spring(50, 0.5, &masses[1], &masses[2]);
+  Spring s3 = Spring(50, 0.5, &masses[2], &masses[3]);
+  Spring s4 = Spring(50, 0.5, &masses[3], &masses[4]);
+   
+
+  springs.push_back(s1);
+  springs.push_back(s2);
+  springs.push_back(s3);
+  springs.push_back(s4);
+}
 //to create the cloth using a double for loop
-void createCloth() {
+void createCloth(int u, int v) {
 	for (unsigned int i = 5; i>0; i--){
 		for (unsigned int j = 5; j>0; j--){
-			Mass m = Mass(Vec3f(0, 0, 0), Vec3f(i, j, 0), Vec3f(0, 0, 0), 1);
-			masses.push_back(m);
+			if((i == 5) && (j==5)){
+				Mass m = Mass(Vec3f(0, 0, 0), Vec3f(i, j, 0), Vec3f(0, 0, 0), 1 , true);
+				masses.push_back(m);
+			}
+			else{
+				Mass m = Mass(Vec3f(0, 0, 0), Vec3f(i, j, 0), Vec3f(0, 0, 0), 1 , false);
+				masses.push_back(m);
+			}
 		}
 	}
 	cout << "number of masses " << masses.size() << endl;
 }
 
 //creates the masses for the cube including the middle mass at the end of the list
-void createCube() {
-	for (unsigned int i = 0; i<=2; i++){
-		for (unsigned int j = 0; j<=2; j++){
-			for (unsigned int k = 0; k<=2; k++) {
-				Mass m = Mass(Vec3f(0, 0, 0), Vec3f(i, j, k), Vec3f(0, 0, 0), 0.3);
+void createCube(int u, int v, int w) {
+	for (unsigned int i = 0; i<=3; i++){
+		for (unsigned int j = 0; j<=3; j++){
+			for (unsigned int k = 0; k<=3; k++) {
+				Mass m = Mass(Vec3f(0, 0, 0), Vec3f(i, j, k), Vec3f(0, 0, 0), 0.3 , false);
 				masses.push_back(m);
 			}
 		}
 	}
-	Mass centerM = Mass(Vec3f(0,1,0), Vec3f(1,1,1), Vec3f(0,1,0), 0.5);
+	Mass centerM = Mass(Vec3f(0,1,0), Vec3f(1,1,1), Vec3f(0,1,0), 1, false);
 	masses.push_back(centerM);
 }
 
@@ -196,17 +250,17 @@ void distanceCube(std::vector<Mass> m) {
 			float distance = (m[i].position-m[j].position).length();
 			if ((distance <= (sqrt(3)))&&(distance>0.1)){
 				//same as cloth cross springs need different values
-				if((distance <= (sqrt(3)))&&(distance>1.0)) {
-					Spring s = Spring(1, 1, &masses[i], &masses[j]);
+				if((distance <= (sqrt(3)))&&(distance>1.01)) {
+					Spring s = Spring(10, 1, &masses[i], &masses[j]);
 					springs.push_back(s);
 					//cout << "Intermediate " << s.a->position << " and " << s.b->position << endl;
 				}
 				else{
-					Spring s = Spring(1, 1, &masses[i], &masses[j]);
+					Spring s = Spring(10, 1, &masses[i], &masses[j]);
 					springs.push_back(s);
 					//cout << "Intermediate " << s.a->position << " and " << s.b->position << endl;
 				}
-			Spring sC = Spring(1, 1, &masses[i], &masses[masses.size()-1]);
+			Spring sC = Spring(0.5, 1, &masses[i], &masses[masses.size()-1]);
 			springs.push_back(sC);
 			}
 		}
@@ -325,45 +379,6 @@ void update(std::vector<Mass> ma, std::vector<Spring> &sp, float dt) {
 	drawSpring(sp);
 }
 
-void createSpringMass() {
-	  //for the spring mass initialize the masses and springs with values
-  Mass m1 = Mass(Vec3f(0, 0, 0), Vec3f(0, 1, 0), Vec3f(0, 1, 0), 0.5);
-  Mass m2 = Mass(Vec3f(0, 0, 0), Vec3f(0, -1, 0), Vec3f(0, 1, 0), 1);
-
-    
-  //adds the masses and springs into a vector for storage
-  masses.push_back(m1);
-  masses.push_back(m2);
-  
-  Spring s1 = Spring(5, 0.2, &masses[0], &masses[1]);
-  springs.push_back(s1);
-}
-
-void createPendulum(){
-	  //initializing the pendulum masses and springs
-  Mass m1 = Mass(Vec3f(0, 0, 0), Vec3f(0, 1, 0), Vec3f(0, 0, 0), 1);
-  Mass m2 = Mass(Vec3f(0, 0, 0), Vec3f(0.3, 0.9, 0), Vec3f(0, 0, 0), 1);
-  Mass m3 = Mass(Vec3f(0, 0, 0), Vec3f(0.6, 0.8, 0), Vec3f(0, 0, 0), 1);
-  Mass m4 = Mass(Vec3f(0, 0, 0), Vec3f(0.9, 0.7, 0), Vec3f(0, 0, 0), 1);
-  Mass m5 = Mass(Vec3f(0, 0, 0), Vec3f(1.2, 1, 0), Vec3f(0, 0, 0), 1);
-
-  masses.push_back(m1);
-  masses.push_back(m2);
-  masses.push_back(m3);
-  masses.push_back(m4);
-  masses.push_back(m5);
-  
-  Spring s1 = Spring(50, 0.5, &masses[0], &masses[1]);
-  Spring s2 = Spring(50, 0.5, &masses[1], &masses[2]);
-  Spring s3 = Spring(50, 0.5, &masses[2], &masses[3]);
-  Spring s4 = Spring(50, 0.5, &masses[3], &masses[4]);
-   
-
-  springs.push_back(s1);
-  springs.push_back(s2);
-  springs.push_back(s3);
-  springs.push_back(s4);
-}
 
 void reloadProjectionMatrix() {
   // Perspective Only
@@ -438,7 +453,7 @@ void init() {
   glEnable(GL_DEPTH_TEST);
   glPointSize(50);
 
-  camera = Camera(Vec3f{5, 0, 10}, Vec3f{0, 0, -1}, Vec3f{0, 1, 0});
+  camera = Camera(Vec3f{0, 0, 10}, Vec3f{0, 0, -1}, Vec3f{0, 1, 0});
 
   generateIDs();
   setupVAO();
@@ -495,26 +510,24 @@ int main(int argc, char **argv) {
   float dt = 0.01;
   
   //creates the spring with one mass
-  //createSpringMass();
-  
-  //creates the pendulum of multiple spring masses
-  //createPendulum();
-  
-  //creates the cloth and below the distance algorithm to create the springs for the cloth
-  //createCloth();
-  //distanceCloth(masses);
-  
-  createCube();
-  distanceCube(masses);
+  createSpringMass();
+
   
   while (glfwGetKey(window, GLFW_KEY_ESCAPE) != GLFW_PRESS &&
          !glfwWindowShouldClose(window)) {
 
-	solveMassSpring(dt);
-	update(masses, springs, dt);
-    displayFunc();
-    moveCamera();
-
+	if (cubemode == true){
+		solveMassSpringCube(dt, rest);
+		update(masses, springs, dt);
+		displayFunc();
+		moveCamera();
+	}
+	else{
+		solveMassSpring(dt, rest);
+		update(masses, springs, dt);
+		displayFunc();
+		moveCamera();
+	}
     glfwSwapBuffers(window);
     glfwPollEvents();
   }
@@ -575,6 +588,43 @@ void windowKeyFunc(GLFWwindow *window, int key, int scancode, int action,
   switch (key) {
   case GLFW_KEY_ESCAPE:
     glfwSetWindowShouldClose(window, GL_TRUE);
+    break;
+  case GLFW_KEY_1:{
+	masses.clear();
+	springs.clear();
+    createSpringMass();
+	cubemode = false;
+	rest = 4;
+	}
+    break;
+  case GLFW_KEY_2:{
+	masses.clear();
+	springs.clear();
+	createPendulum();
+	cubemode = false;
+	rest = 1;
+	}
+    break;
+  case GLFW_KEY_3:{
+	masses.clear();
+	springs.clear();
+    createCloth(5,5);
+    distanceCloth(masses);
+	cubemode = false;
+	rest = 2;
+	}
+    break;
+  case GLFW_KEY_4:{
+	masses.clear();
+	springs.clear();
+    createCube(2,2,2);
+    distanceCube(masses);
+	cubemode = true;
+	rest = 2;
+	}
+    break;
+  case GLFW_KEY_R:
+	camera = Camera(Vec3f{0, 0, 10}, Vec3f{0, 0, -1}, Vec3f{0, 1, 0});
     break;
   case GLFW_KEY_W:
     g_moveBackForward = set ? 1 : 0;
