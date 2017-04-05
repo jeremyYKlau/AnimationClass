@@ -22,9 +22,6 @@
 #include <iterator>
 #include <iostream>
 
-// Stores a 4 by 4 Matrix in Row Major order.
-// When passing to glUniform4x4fv, turn on transpose.
-
 class Mat4f {
 public:
   enum { DIM = 4, NUM_ELEM = 16 };

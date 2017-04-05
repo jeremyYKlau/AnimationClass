@@ -22,6 +22,7 @@
  */
 
 #include <iostream>
+#include <random>
 #include <cmath>
 #include <chrono>
 #include <limits>
@@ -34,6 +35,9 @@
 #include "Mat4f.h"
 #include "OpenGLMatrixTools.h"
 #include "Camera.h"
+#include "Boid.h"
+
+using namespace std;
 
 //==================== GLOBAL VARIABLES ====================//
 /*	Put here for simplicity. Feel free to restructure into
@@ -89,7 +93,7 @@ void init();
 void generateIDs();
 void deleteIDs();
 void setupVAO();
-void loadQuadGeometryToGPU();
+void generateBoid();
 void reloadProjectionMatrix();
 void loadModelViewMatrix();
 void setupModelViewProjectionTransform();
@@ -105,12 +109,30 @@ void windowMouseButtonFunc(GLFWwindow *window, int button, int action,
 void windowMouseMotionFunc(GLFWwindow *window, double x, double y);
 void windowKeyFunc(GLFWwindow *window, int key, int scancode, int action,
                    int mods);
-void animateQuad(float t);
 void moveCamera();
 void reloadMVPUniform();
 void reloadColorUniform(float r, float g, float b);
 std::string GL_ERROR();
 int main(int, char **);
+
+void drawBoids(std::vector<Boid> b);
+void generateBoids(int c);
+
+//vector storing all the boids
+std::vector<Boid> boids;
+
+//constants used in main equation used to get heading
+float avoidConst = 2.0;
+float followConst = 2.0;
+float velMatchConst = 2.0;
+
+//c is the amount of boids to draw - 1
+int c = 2500;
+
+//constant radius for avoidance, follow and vel matching
+float rA;
+float rF;
+float rV;
 
 //==================== FUNCTION DEFINITIONS ====================//
 
@@ -128,8 +150,9 @@ void displayFunc() {
   // Use VAO that holds buffer bindings
   // and attribute config of buffers
   glBindVertexArray(vaoID);
-  // Draw Quads, start at vertex 0, draw 4 of them (for a quad)
-  glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+  //For drawing the boids
+  glDrawArrays(GL_TRIANGLES, 0, boids.size() * c); 
+  //glDrawArraysInstanced(GL_TRIANGLES, 0, 6, 10);
 
   // ==== DRAW LINE ===== //
   MVP = P * V * line_M;
@@ -140,51 +163,73 @@ void displayFunc() {
   // Use VAO that holds buffer bindings
   // and attribute config of buffers
   glBindVertexArray(line_vaoID);
-  // Draw lines
-  glDrawArrays(GL_LINES, 0, 2);
+  // Draw lines for bounding box
+  glDrawArrays(GL_LINES, 0, 8);
   
 }
 
-void animateQuad(float t) {
-  M = RotateAboutYMatrix(100 * t);
-
-  float s = (std::sin(t) + 1.f) / 2.f;
-  float x = (1 - s) * (10) + s * (-10);
-
-  M = TranslateMatrix(x, 0, 0) * M;
-
-  setupModelViewProjectionTransform();
-  reloadMVPUniform();
+void generateBoids(int c){
+	
+	std::random_device rd; // obtain a random number from hardware
+    std::mt19937 eng(rd()); // seed the generator
+    std::uniform_int_distribution<> distr(-20, 20);
+    
+	for(int i = 0; i < c; i++){
+		float x = distr(eng);
+		float y = distr(eng);
+		float z = distr(eng);
+		Vec3f pos = Vec3f(x,y,z);
+		Boid b = Boid(pos,Vec3f(0,0,0));
+		boids.push_back(b);
+		cout << "BOID " << i << " POS " << pos << endl;
+	}
 }
 
-void loadQuadGeometryToGPU() {
-  // Just basic layout of floats, for a quad
-  // 3 floats per vertex, 4 vertices
+void drawBoids(std::vector<Boid> b) {
+  //drawing the actual boid
   std::vector<Vec3f> verts;
-  verts.push_back(Vec3f(-1, -1, 0));
-  verts.push_back(Vec3f(-1, 1, 0));
-  verts.push_back(Vec3f(1, -1, 0));
-  verts.push_back(Vec3f(1, 1, 0));
-
+  for(unsigned int i =0; i <= b.size(); i++) {
+	  verts.push_back(b[i].position);
+	  verts.push_back(Vec3f(b[i].position.x()-0.5, b[i].position.y()-1, b[i].position.z()));
+	  verts.push_back(Vec3f(b[i].position.x(), b[i].position.y()-0.5, b[i].position.z()-0.5));
+	  verts.push_back(Vec3f(b[i].position.x(), b[i].position.y()-0.5, b[i].position.z()-0.5));
+	  verts.push_back(Vec3f(b[i].position.x()+0.5, b[i].position.y()-1, b[i].position.z()));
+	  verts.push_back(b[i].position);
+	  cout << "size of verts " << verts.size() << endl;
+	}
   glBindBuffer(GL_ARRAY_BUFFER, vertBufferID);
   glBufferData(GL_ARRAY_BUFFER,
-               sizeof(Vec3f) * 4, // byte size of Vec3f, 4 of them
+               sizeof(Vec3f) * boids.size() * 6, // byte size of Vec3f, 4 of them
                verts.data(),      // pointer (Vec3f*) to contents of verts
                GL_STATIC_DRAW);   // Usage pattern of GPU buffer
 }
 
-void loadLineGeometryToGPU() {
+void BoundingLine() {
   // Just basic layout of floats, for a quad
   // 3 floats per vertex, 4 vertices
   std::vector<Vec3f> verts;
-  verts.push_back(Vec3f(-10, 0, 0));
-  verts.push_back(Vec3f(10, 0, 0));
-
+//bottom line
+  verts.push_back(Vec3f(-20, -20, 0));
+  verts.push_back(Vec3f(20, -20, 0));
+//right line
+  verts.push_back(Vec3f(20, -20, 0));
+  verts.push_back(Vec3f(20, 20, 0));
+//top line  
+  verts.push_back(Vec3f(20, 20, 0));
+  verts.push_back(Vec3f(-20, 20, 0));
+//left line  
+  verts.push_back(Vec3f(-20, 20, 0));
+  verts.push_back(Vec3f(-20, -20, 0));
+  
   glBindBuffer(GL_ARRAY_BUFFER, line_vertBufferID);
   glBufferData(GL_ARRAY_BUFFER,
-               sizeof(Vec3f) * 2, // byte size of Vec3f, 4 of them
+               sizeof(Vec3f) * 8, // byte size of Vec3f, 4 of them
                verts.data(),      // pointer (Vec3f*) to contents of verts
                GL_STATIC_DRAW);   // Usage pattern of GPU buffer
+}
+
+void update(std::vector<Boid> b){
+	drawBoids(b);
 }
 
 void setupVAO() {
@@ -237,7 +282,9 @@ void loadModelViewMatrix() {
   V = camera.lookatMatrix();
 }
 
-void reloadViewMatrix() { V = camera.lookatMatrix(); }
+void reloadViewMatrix() {
+  V = camera.lookatMatrix(); 
+}
 
 void setupModelViewProjectionTransform() {
   MVP = P * V * M; // transforms vertices from right to left (odd huh?)
@@ -288,14 +335,17 @@ void init() {
   glEnable(GL_DEPTH_TEST);
   glPointSize(50);
 
-  camera = Camera(Vec3f{0, 0, 5}, Vec3f{0, 0, -1}, Vec3f{0, 1, 0});
+  camera = Camera(Vec3f{0, 0, 50}, Vec3f{0, 0, -1}, Vec3f{0, 1, 0});
 
   // SETUP SHADERS, BUFFERS, VAOs
 
   generateIDs();
   setupVAO();
-  loadQuadGeometryToGPU();
-  loadLineGeometryToGPU();
+  
+  generateBoids(c);
+  drawBoids(boids);
+  
+  BoundingLine();
 
   loadModelViewMatrix();
   reloadProjectionMatrix();
@@ -345,16 +395,22 @@ int main(int argc, char **argv) {
 
   init(); // our own initialize stuff func
 
-  float t = 0;
   float dt = 0.01;
 
   while (glfwGetKey(window, GLFW_KEY_ESCAPE) != GLFW_PRESS &&
          !glfwWindowShouldClose(window)) {
 
-    if (g_play) {
-      t += dt;
-      animateQuad(t);
-    }
+	update(boids);
+/*
+   //MAIN LOOP FOR CALCULATIONS WITH BOIDS
+	for(unsigned int i = 0; i < boids.size(); i++){
+		for(unsigned int j = 0; j < boids.size(); j++){
+			//check all the positions of boids and do a calculation based off their radius
+			//after you get the hA,hF,and hV use in equation (h = avoidConst*hA + followConst*hF + velMatchConst*hV)
+			//then use in semiEuler method in boid so boids[i].semiEuler(dt, h) this should update position orientation is different and will attempt after this works
+		}
+	}
+*/
 
     displayFunc();
     moveCamera();
