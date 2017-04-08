@@ -1,0 +1,11 @@
+//Possibly add orientation to class
+
+for each boid consider all boids around it 
+	
+	for avoidance: find average position of all boids in radius, determine avoidance heading by negating the 
+		average - alternatively weight normalized vectors based on how close they are
+	
+	for follow: calculate the average position of all boids(in radius) and set that to the boids heading
+	
+	for velocity matching: take average velocity of all boids(in radius), take that vector and get our current 
+		velocity, and subtract the new one from the current to get our heading. h = acH + fcH + acV

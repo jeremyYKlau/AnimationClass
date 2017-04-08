@@ -120,6 +120,10 @@ void generateBoids(int c);
 
 //vector storing all the boids
 std::vector<Boid> boids;
+//three separate vectors to hold boids to use in avoid follow and matching behavior calculation
+std::vector<Boid> avoid;
+std::vector<Boid> follow;
+std::vector<Boid> match;
 
 //constants used in main equation used to get heading
 float avoidConst = 2.0;
@@ -127,12 +131,16 @@ float followConst = 2.0;
 float velMatchConst = 2.0;
 
 //c is the amount of boids to draw - 1
-int c = 2500;
+int c = 10;
 
 //constant radius for avoidance, follow and vel matching
-float rA;
-float rF;
-float rV;
+float rA = 3.0;
+float rF = 6.0;
+float rV = 10.0;
+
+//initialization values for the starting boid rand range and initial velocity rand generator range
+float rang = 10;
+float ivRang = 1;
 
 //==================== FUNCTION DEFINITIONS ====================//
 
@@ -168,23 +176,75 @@ void displayFunc() {
   
 }
 
+void boidBehavior(std::vector<Boid> b, float dt){
+	 //MAIN LOOP FOR CALCULATIONS WITH BOIDS
+	Vec3f hA;
+	Vec3f hF;
+	Vec3f hV;
+	int avoidCount;
+	int followCount;
+	int velocityCount;
+	
+	for(unsigned int i = 0; i < b.size(); i++){
+		for(unsigned int j = 0; j < b.size(); j++){
+			Vec3f check = b[i].position - b[j].position;
+			float distance = abs(check.length());
+			if (distance <= rA){
+				cout << "AVOIDING" << endl;
+				hA += b[j].position;
+				avoidCount = avoidCount + 1; 
+				cout << "avoid heading " << hA << endl;
+			} 
+			else if ((distance > rA) && (distance <= rF)){
+				cout << "FOLLOWING" << endl;
+				hF += b[j].position;
+				followCount = followCount + 1;
+				cout << "following heading " << hF << endl;
+			}
+			else {
+				cout << "MATCHING" << endl;
+				hV += b[j].velocity;
+				velocityCount = velocityCount + 1;
+				cout << "matching heading " << hV << endl;
+			}
+			hA = hA/avoidCount;
+			hF = hF/followCount;
+			hV = hV/velocityCount;
+			//after you get the hA,hF,and hV use in equation 
+			Vec3f h = avoidConst*hA + followConst*hF + velMatchConst*hV;
+			//then use in semiEuler method in boid so boids[i].semiEuler(dt, h) this should update position, orientation is different and will attempt after this works
+			boids[i].semiEuler(dt, h);
+		}
+	}
+}
+
 void generateBoids(int c){
 	
+	//these 3 lines for the random generation of the boids position
 	std::random_device rd; // obtain a random number from hardware
     std::mt19937 eng(rd()); // seed the generator
-    std::uniform_int_distribution<> distr(-20, 20);
+    std::uniform_int_distribution<> distr(-rang, rang);
+
+	//these 3 lines for the random generation of the boids initial velocity
+    std::random_device rd1;
+    std::mt19937 eng1(rd1());
+    std::uniform_int_distribution<> distr1(-ivRang, ivRang);
     
 	for(int i = 0; i < c; i++){
 		float x = distr(eng);
 		float y = distr(eng);
 		float z = distr(eng);
+		float vX = distr1(eng1);
+		float vY = distr1(eng1);
+		float vZ = distr1(eng1);
 		Vec3f pos = Vec3f(x,y,z);
-		Boid b = Boid(pos,Vec3f(0,0,0));
+		Vec3f vel = Vec3f(vX,vY,vZ);
+		Boid b = Boid(pos, vel);
 		boids.push_back(b);
-		cout << "BOID " << i << " POS " << pos << endl;
 	}
 }
 
+//called to draw the boids 
 void drawBoids(std::vector<Boid> b) {
   //drawing the actual boid
   std::vector<Vec3f> verts;
@@ -195,7 +255,6 @@ void drawBoids(std::vector<Boid> b) {
 	  verts.push_back(Vec3f(b[i].position.x(), b[i].position.y()-0.5, b[i].position.z()-0.5));
 	  verts.push_back(Vec3f(b[i].position.x()+0.5, b[i].position.y()-1, b[i].position.z()));
 	  verts.push_back(b[i].position);
-	  cout << "size of verts " << verts.size() << endl;
 	}
   glBindBuffer(GL_ARRAY_BUFFER, vertBufferID);
   glBufferData(GL_ARRAY_BUFFER,
@@ -204,6 +263,7 @@ void drawBoids(std::vector<Boid> b) {
                GL_STATIC_DRAW);   // Usage pattern of GPU buffer
 }
 
+//most likely will change this into a single point for the boids to go towards
 void BoundingLine() {
   // Just basic layout of floats, for a quad
   // 3 floats per vertex, 4 vertices
@@ -228,6 +288,7 @@ void BoundingLine() {
                GL_STATIC_DRAW);   // Usage pattern of GPU buffer
 }
 
+//later may find the need for this to be a transformation on each boid instead of a re-draw
 void update(std::vector<Boid> b){
 	drawBoids(b);
 }
@@ -401,16 +462,7 @@ int main(int argc, char **argv) {
          !glfwWindowShouldClose(window)) {
 
 	update(boids);
-/*
-   //MAIN LOOP FOR CALCULATIONS WITH BOIDS
-	for(unsigned int i = 0; i < boids.size(); i++){
-		for(unsigned int j = 0; j < boids.size(); j++){
-			//check all the positions of boids and do a calculation based off their radius
-			//after you get the hA,hF,and hV use in equation (h = avoidConst*hA + followConst*hF + velMatchConst*hV)
-			//then use in semiEuler method in boid so boids[i].semiEuler(dt, h) this should update position orientation is different and will attempt after this works
-		}
-	}
-*/
+	boidBehavior(boids, dt);
 
     displayFunc();
     moveCamera();
