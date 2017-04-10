@@ -1,0 +1,11 @@
+1000 0 0 //boid count
+2 0 0 //avoid user const
+1 0 0 //follow user const
+1.6 0 0 //matching user const 
+5 0 0 //avoid radius
+20 0 0 //follow radius
+30 0 0 //matching radius
+15 0 0 //initial starting range of boid
+0.5 0 0  //initial velocity of boids
+40 40 40 //upper bounding range for the boids
+-40 -40 -40 //lower bounding range for boids

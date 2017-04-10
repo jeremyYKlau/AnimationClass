@@ -34,6 +34,7 @@
 #include "Vec3f.h"
 #include "Mat4f.h"
 #include "OpenGLMatrixTools.h"
+#include "Vec3f_FileIO.h"
 #include "Camera.h"
 #include "Boid.h"
 
@@ -125,13 +126,14 @@ std::vector<Boid> avoid;
 std::vector<Boid> follow;
 std::vector<Boid> match;
 
-//constants used in main equation used to get heading
-float avoidConst = 2.0;
-float followConst = 2.0;
-float velMatchConst = 2.0;
-
 //c is the amount of boids to draw - 1
-int c = 10;
+int c = 25;
+
+//constants used in main equation used to get heading, told that they were to sum to 1
+float avoidConst = 2.0;
+float followConst = 1.0;
+float matchConst = 1.6;
+
 
 //constant radius for avoidance, follow and vel matching
 float rA = 3.0;
@@ -140,13 +142,16 @@ float rV = 10.0;
 
 //initialization values for the starting boid rand range and initial velocity rand generator range
 float rang = 10;
-float ivRang = 1;
+float ivRang = 0.5;
 
+//bounding constraint in the form of a vec3
+Vec3f upperBound = Vec3f(20,20,20);
+Vec3f lowerBound = Vec3f(-20,-20,-20);
 //==================== FUNCTION DEFINITIONS ====================//
 
 void displayFunc() {
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
+  glPointSize(15);
   // Use our shader
   glUseProgram(basicProgramID);
 
@@ -173,48 +178,87 @@ void displayFunc() {
   glBindVertexArray(line_vaoID);
   // Draw lines for bounding box
   glDrawArrays(GL_LINES, 0, 8);
-  
+  //glDrawArrays(GL_POINTS, 0, 1);
+}
+
+void loadConstants(){
+	std::string file( "data.txt" );
+	
+	std::vector<Vec3f> constants;
+	
+	loadVec3fFromFile( constants, file);
+
+	for( auto & v : constants )
+	{
+		constants.push_back(v);
+	}
+	c = constants[0].x();
+	avoidConst = constants[1].x();
+	followConst = constants[2].x();
+	matchConst = constants[3].x();
+	rA = constants[4].x();
+	rF = constants[5].x();
+	rV = constants[6].x();
+	rang = constants[7].x();
+	ivRang = constants[8].x();
+	upperBound = constants[9];
+	lowerBound = constants[10];
 }
 
 void boidBehavior(std::vector<Boid> b, float dt){
-	 //MAIN LOOP FOR CALCULATIONS WITH BOIDS
-	Vec3f hA;
-	Vec3f hF;
-	Vec3f hV;
-	int avoidCount;
-	int followCount;
-	int velocityCount;
+	//MAIN LOOP FOR CALCULATIONS WITH BOIDS
+	Vec3f hA = Vec3f(0,0,0);
+	Vec3f hF = Vec3f(0,0,0);
+	Vec3f hV = Vec3f(0,0,0);
+	Vec3f center = Vec3f(0, 0, 0);
+	
+	int avoidCount = 0;
+	int followCount = 0;
+	int velocityCount = 0;
+	
+	float followWeight = 0;
+	float matchWeight = 0;
 	
 	for(unsigned int i = 0; i < b.size(); i++){
 		for(unsigned int j = 0; j < b.size(); j++){
-			Vec3f check = b[i].position - b[j].position;
-			float distance = abs(check.length());
-			if (distance <= rA){
-				cout << "AVOIDING" << endl;
-				hA += b[j].position;
-				avoidCount = avoidCount + 1; 
-				cout << "avoid heading " << hA << endl;
+			Vec3f magnitude = b[i].position - b[j].position;
+			float distance = abs(magnitude.length());
+			if (distance <= rA && (distance >= 0)){
+				hA += b[j].position.normalized();
+				avoidCount = avoidCount + 1;
 			} 
 			else if ((distance > rA) && (distance <= rF)){
-				cout << "FOLLOWING" << endl;
+				followWeight = (distance-rA)/(rF-rA);
 				hF += b[j].position;
 				followCount = followCount + 1;
-				cout << "following heading " << hF << endl;
 			}
-			else {
-				cout << "MATCHING" << endl;
+			else if ((distance > rF) && (distance <= rV)){
+				matchWeight = (distance-rF)/(rV-rF);
 				hV += b[j].velocity;
 				velocityCount = velocityCount + 1;
-				cout << "matching heading " << hV << endl;
 			}
-			hA = hA/avoidCount;
-			hF = hF/followCount;
-			hV = hV/velocityCount;
-			//after you get the hA,hF,and hV use in equation 
-			Vec3f h = avoidConst*hA + followConst*hF + velMatchConst*hV;
-			//then use in semiEuler method in boid so boids[i].semiEuler(dt, h) this should update position, orientation is different and will attempt after this works
-			boids[i].semiEuler(dt, h);
 		}
+		if(avoidCount > 0){
+			hA = (hA/avoidCount)*-1;
+		}
+		else if(followCount > 0){
+			hF = (hF/followCount)*(followWeight/followCount);
+		}
+		else if(velocityCount > 0){
+			hV = b[i].velocity - ((hV/velocityCount)*(matchWeight/velocityCount));
+		}
+		//after you get the hA,hF,and hV use in equation to get acceleration used in semiEuler formula
+		Vec3f h = ((avoidConst*hA) + (followConst*hF) + (matchConst*hV))*0.5;
+		//two functions to check a bounding range
+		/*if((boids[i].position.x() > upperBound.x()) || (boids[i].position.y() > upperBound.y()) || (boids[i].position.z() > upperBound.z())){
+			h = h * -1000;
+		}
+		if((boids[i].position.x() < lowerBound.x()) || (boids[i].position.y() < lowerBound.y()) || (boids[i].position.z() < lowerBound.z())){
+			h = h * -1000;
+		}*/
+		cout << "heading " << h << endl;
+		//then use in semiEuler method in boid so boids[i].semiEuler(dt, h) this should update position, orientation is different and will attempt after this works
+		boids[i].semiEuler(dt, h);
 	}
 }
 
@@ -284,6 +328,20 @@ void BoundingLine() {
   glBindBuffer(GL_ARRAY_BUFFER, line_vertBufferID);
   glBufferData(GL_ARRAY_BUFFER,
                sizeof(Vec3f) * 8, // byte size of Vec3f, 4 of them
+               verts.data(),      // pointer (Vec3f*) to contents of verts
+               GL_STATIC_DRAW);   // Usage pattern of GPU buffer
+}
+
+// point to move towards
+void drawTarget(Vec3f pos) {
+//draw a single point
+  std::vector<Vec3f> verts;
+//bottom line
+  verts.push_back(pos);
+  
+  glBindBuffer(GL_ARRAY_BUFFER, line_vertBufferID);
+  glBufferData(GL_ARRAY_BUFFER,
+               sizeof(Vec3f) * 1, // byte size of Vec3f, 4 of them
                verts.data(),      // pointer (Vec3f*) to contents of verts
                GL_STATIC_DRAW);   // Usage pattern of GPU buffer
 }
@@ -407,6 +465,8 @@ void init() {
   drawBoids(boids);
   
   BoundingLine();
+  //drawTarget(Vec3f(0, 0, 0));
+  loadConstants();
 
   loadModelViewMatrix();
   reloadProjectionMatrix();
@@ -456,7 +516,7 @@ int main(int argc, char **argv) {
 
   init(); // our own initialize stuff func
 
-  float dt = 0.01;
+  float dt = 0.001;
 
   while (glfwGetKey(window, GLFW_KEY_ESCAPE) != GLFW_PRESS &&
          !glfwWindowShouldClose(window)) {
@@ -515,6 +575,7 @@ void windowMouseMotionFunc(GLFWwindow *window, double x, double y) {
     reloadViewMatrix();
     setupModelViewProjectionTransform();
     reloadMVPUniform();
+    
   }
 
   g_cursorX = x;
@@ -545,6 +606,11 @@ void windowKeyFunc(GLFWwindow *window, int key, int scancode, int action,
     break;
   case GLFW_KEY_E:
     g_moveUpDown = set ? 1 : 0;
+    break;
+    //restart scene with changed values from data.txt
+  case GLFW_KEY_R:
+    boids.clear();
+    init();
     break;
   case GLFW_KEY_UP:
     g_rotateUpDown = set ? -1 : 0;
