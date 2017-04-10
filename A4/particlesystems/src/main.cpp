@@ -126,27 +126,32 @@ std::vector<Boid> avoid;
 std::vector<Boid> follow;
 std::vector<Boid> match;
 
-//c is the amount of boids to draw - 1
+//c is the amount of boids to draw
 int c = 25;
 
 //constants used in main equation used to get heading, told that they were to sum to 1
-float avoidConst = 2.0;
+float avoidConst = 1.0;
 float followConst = 1.0;
-float matchConst = 1.6;
+float matchConst = 100.6;
 
 
 //constant radius for avoidance, follow and vel matching
-float rA = 3.0;
-float rF = 6.0;
-float rV = 10.0;
+float rA = 5.0;
+float rF = 10.0;
+float rV = 16.0;
 
 //initialization values for the starting boid rand range and initial velocity rand generator range
 float rang = 10;
 float ivRang = 0.5;
 
 //bounding constraint in the form of a vec3
-Vec3f upperBound = Vec3f(20,20,20);
-Vec3f lowerBound = Vec3f(-20,-20,-20);
+Vec3f upperBound = Vec3f(20,20,10);
+Vec3f lowerBound = Vec3f(-20,-20,-10);
+Vec3f maxSpeed = Vec3f(30, 30, 30);
+Vec3f minSpeed = Vec3f(-30, -30, -30);
+
+float boundingWeight = 100;
+float objectRadius = 10;
 //==================== FUNCTION DEFINITIONS ====================//
 
 void displayFunc() {
@@ -177,8 +182,8 @@ void displayFunc() {
   // and attribute config of buffers
   glBindVertexArray(line_vaoID);
   // Draw lines for bounding box
-  glDrawArrays(GL_LINES, 0, 8);
-  //glDrawArrays(GL_POINTS, 0, 1);
+  //glDrawArrays(GL_LINES, 0, 8);
+  glDrawArrays(GL_POINTS, 0, 1);
 }
 
 void loadConstants(){
@@ -203,6 +208,8 @@ void loadConstants(){
 	ivRang = constants[8].x();
 	upperBound = constants[9];
 	lowerBound = constants[10];
+	boundingWeight = constants[11].x();
+	objectRadius = constants[12].x();
 }
 
 void boidBehavior(std::vector<Boid> b, float dt){
@@ -224,8 +231,15 @@ void boidBehavior(std::vector<Boid> b, float dt){
 			Vec3f magnitude = b[i].position - b[j].position;
 			float distance = abs(magnitude.length());
 			if (distance <= rA && (distance >= 0)){
+				Vec3f diff = b[i].position - b[j].position;
+				if ((diff.x() = 0)|| (diff.y() = 0) || (diff.z() = 0)) {
+					hA += diff.normalized();
+					avoidCount = avoidCount + 1;
+				}
+				/*//original avoidance equation
 				hA += b[j].position.normalized();
 				avoidCount = avoidCount + 1;
+			}*/ 
 			} 
 			else if ((distance > rA) && (distance <= rF)){
 				followWeight = (distance-rA)/(rF-rA);
@@ -248,15 +262,27 @@ void boidBehavior(std::vector<Boid> b, float dt){
 			hV = b[i].velocity - ((hV/velocityCount)*(matchWeight/velocityCount));
 		}
 		//after you get the hA,hF,and hV use in equation to get acceleration used in semiEuler formula
-		Vec3f h = ((avoidConst*hA) + (followConst*hF) + (matchConst*hV))*0.5;
-		//two functions to check a bounding range
-		/*if((boids[i].position.x() > upperBound.x()) || (boids[i].position.y() > upperBound.y()) || (boids[i].position.z() > upperBound.z())){
-			h = h * -1000;
+		Vec3f h = ((avoidConst*hA) + (followConst*hF) + (matchConst*hV));
+		
+		//multiple if statements to work a lower and upper bound read from a file
+		if(boids[i].position.x() > upperBound.x()){
+			h.x() = h.x() + minSpeed.x()*(boundingWeight);
 		}
-		if((boids[i].position.x() < lowerBound.x()) || (boids[i].position.y() < lowerBound.y()) || (boids[i].position.z() < lowerBound.z())){
-			h = h * -1000;
-		}*/
-		cout << "heading " << h << endl;
+		if(boids[i].position.y() > upperBound.y()){
+			h.y() = h.y() + minSpeed.y()*(boundingWeight);
+		}
+		if(boids[i].position.z() > upperBound.z()){
+			h.z() = h.z() + minSpeed.z()*(boundingWeight);
+		}
+		if(boids[i].position.x() < lowerBound.x()){
+			h.x() = h.x() + maxSpeed.x()*(boundingWeight);
+		}
+		if(boids[i].position.y() < lowerBound.y()){
+			h.y() = h.y() + maxSpeed.y()*(boundingWeight);
+		}
+		if(boids[i].position.z() < lowerBound.z()){
+			h.z() = h.z() + maxSpeed.z()*(boundingWeight);
+		}
 		//then use in semiEuler method in boid so boids[i].semiEuler(dt, h) this should update position, orientation is different and will attempt after this works
 		boids[i].semiEuler(dt, h);
 	}
@@ -454,7 +480,7 @@ void init() {
   glEnable(GL_DEPTH_TEST);
   glPointSize(50);
 
-  camera = Camera(Vec3f{0, 0, 50}, Vec3f{0, 0, -1}, Vec3f{0, 1, 0});
+  camera = Camera(Vec3f{0, 0, 40}, Vec3f{0, 0, -1}, Vec3f{0, 1, 0});
 
   // SETUP SHADERS, BUFFERS, VAOs
 
@@ -465,7 +491,7 @@ void init() {
   drawBoids(boids);
   
   BoundingLine();
-  //drawTarget(Vec3f(0, 0, 0));
+  drawTarget(Vec3f(2, 2, -2));
   loadConstants();
 
   loadModelViewMatrix();
@@ -516,7 +542,7 @@ int main(int argc, char **argv) {
 
   init(); // our own initialize stuff func
 
-  float dt = 0.001;
+  float dt = 0.01;
 
   while (glfwGetKey(window, GLFW_KEY_ESCAPE) != GLFW_PRESS &&
          !glfwWindowShouldClose(window)) {

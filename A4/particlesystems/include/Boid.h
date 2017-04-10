@@ -16,11 +16,14 @@ class Boid {
 public:;
 	Vec3f position;
 	Vec3f velocity;
+	Mat4f orientation;
 	
 	Boid();
 	~Boid();
 	Boid(Vec3f Pos, Vec3f V);
+	Boid(Vec3f Pos, Vec3f V, Mat4f orientation);
 	
+	void orientate(Vec3f heading, Vec3f up);
 	void semiEuler(float dt, Vec3f h);
 private:
 
