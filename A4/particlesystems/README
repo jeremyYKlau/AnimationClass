@@ -19,5 +19,5 @@ arrow down			: rotates camera down
 shift+arrow left	: roll camera left
 shift+arrow right	: roll camera right
 
-space bar			: pause/play
+
 esc					: exit

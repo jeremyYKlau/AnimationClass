@@ -29,6 +29,10 @@
 
 #include "glad/glad.h"
 #include <GLFW/glfw3.h>
+#include <glm/vec3.hpp> 
+#include <glm/vec4.hpp> 
+#include <glm/mat4x4.hpp> 
+#include <glm/gtc/matrix_transform.hpp> 
 
 #include "ShaderTools.h"
 #include "Vec3f.h"
@@ -39,7 +43,6 @@
 #include "Boid.h"
 
 using namespace std;
-
 //==================== GLOBAL VARIABLES ====================//
 /*	Put here for simplicity. Feel free to restructure into
 *	appropriate classes or abstractions.
@@ -265,6 +268,7 @@ void boidBehavior(std::vector<Boid> b, float dt){
 		Vec3f h = ((avoidConst*hA) + (followConst*hF) + (matchConst*hV));
 		
 		//multiple if statements to work a lower and upper bound read from a file
+		
 		if(boids[i].position.x() > upperBound.x()){
 			h.x() = h.x() + minSpeed.x()*(boundingWeight);
 		}
