@@ -1,13 +1,13 @@
-100 0 0 //boid count
-2 0 0 //avoid user const
-1.5 0 0 //follow user const
-1.6 0 0 //matching user const 
-3 0 0 //avoid radius
-6 0 0 //follow radius
-10 0 0 //matching radius
-5 0 0 //initial starting range of boid
-1 1 1  //initial velocity of boids
-5 5 5 //upper bounding range for the boids
--5 -5 -5 //lower bounding range for boids
-1000 0 0 //bounding weights used when a point goes out of the bounds
-10 0 0 //avoidance radius for the one point object to avoid in the scene
+100 0 0 //boid count only :x value
+2 0 0 //avoid user const only :x value
+1.5 0 0 //follow user const only :x value
+1.6 0 0 //matching user const only :x value
+3 0 0 //avoid radius :only x value
+6 0 0 //follow radius :only x value
+10 0 0 //matching radius :only x value
+5 0 0 //initial starting range of boid :only x value
+1 1 1  //initial velocity of boids :takes whole vector
+5 5 5 //upper bounding range for the boids :takes whole vector
+-5 -5 -5 //lower bounding range for boids :takes whole vector
+1000 0 0 //bounding weights used when a point goes out of the bounds :only x value
+10 0 0 //avoidance radius for the one point object to avoid in the scene :only x value

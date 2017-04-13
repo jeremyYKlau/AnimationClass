@@ -1,8 +1,8 @@
 Sample Code
-Written By: Andrew Robert Owens
+Written By: Jeremy Lau using Andrew Robert Owens boilerplate code
 Copyright (c) 2017
 
-CPSC587F17 Animaiton
+CPSC587F17 Assignment 4
 
 == CONTROLS ==
 w                   : move forward
@@ -11,6 +11,8 @@ a                   : strife left
 d                   : strife right
 q                   : move up
 e                   : move down
+
+r					: Load values from the parameter file
 
 arrow left			: rotate to the left
 arrow right			: rotate to the right
@@ -21,3 +23,13 @@ shift+arrow right	: roll camera right
 
 
 esc					: exit
+
+
+Notes: 
+First bounding box gives strange behavior but after messing with it 
+removing bounding lines causes simulation to freeze up sometime so as bad as they are and
+as messed up as it makes the boids move they are necessary.
+Second press R right at the start to load the values for some reason the values don't start 
+initialized from the file they use some random values I had in there from testing.
+Third there isn't any extra stuff just somewhat working behaviors and file input honestly just using
+the cuspy file input and reading system from assignment 1. Full credit to the cuspy system for that.
