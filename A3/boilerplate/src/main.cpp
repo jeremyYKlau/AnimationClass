@@ -195,7 +195,7 @@ void createPendulum(){
 void createCloth(int u, int v) {
 	for (unsigned int i = 5; i>0; i--){
 		for (unsigned int j = 5; j>0; j--){
-			if((i == 5) && (j==5)){
+			if(j==5){
 				Mass m = Mass(Vec3f(0, 0, 0), Vec3f(i, j, 0), Vec3f(0, 0, 0), 1 , true);
 				masses.push_back(m);
 			}
